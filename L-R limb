@@ -27,17 +27,6 @@ local mainCorner = Instance.new("UICorner")
 mainCorner.CornerRadius = UDim.new(0, 16)
 mainCorner.Parent = mainFrame
 
--- Subtle Shadow
-local shadow = Instance.new("ImageLabel")
-shadow.Size = UDim2.new(1, 20, 1, 20)
-shadow.Position = UDim2.new(0, -10, 0, -10)
-shadow.BackgroundTransparency = 1
-shadow.Image = "rbxassetid://1316045217"
-shadow.ImageColor3 = Color3.new(0, 0, 0)
-shadow.ImageTransparency = 0.6
-shadow.ZIndex = 0
-shadow.Parent = mainFrame
-
 -- Title
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 40)
@@ -207,6 +196,7 @@ local targetPlayer = nil
 local isActive = false
 local isAiming = false
 local currentTargetArm = nil
+local originalWeldC0 = {}
 
 -- Get character
 local function getCharacter()
@@ -348,18 +338,15 @@ local function getClosestArm(character)
     
     local characterPos = character.PrimaryPart and character.PrimaryPart.Position or character.HumanoidRootPart.Position
     
-    -- If only one arm exists, return that one
     if leftArm and not rightArm then return leftArm end
     if rightArm and not leftArm then return rightArm end
     
-    -- Calculate distance from character center to each arm
     local leftPos = leftArm.Position
     local rightPos = rightArm.Position
     
     local distLeft = (leftPos - characterPos).Magnitude
     local distRight = (rightPos - characterPos).Magnitude
     
-    -- Return the closest arm to the body (more natural)
     if distLeft <= distRight then
         return leftArm
     else
@@ -367,21 +354,30 @@ local function getClosestArm(character)
     end
 end
 
--- Function to get player's arm
-local function getPlayerArm()
+-- Function to get player's arm and its weld
+local function getPlayerArmAndWeld()
     local char = getCharacter()
-    if not char then return nil end
+    if not char then return nil, nil end
     
-    -- Use Right Arm by default
     local arm = char:FindFirstChild("Right Arm") or char:FindFirstChild("RightArm")
-    if arm then return arm end
+    if not arm then
+        arm = char:FindFirstChild("Left Arm") or char:FindFirstChild("LeftArm")
+    end
+    if not arm then return nil, nil end
     
-    -- Fallback to Left Arm
-    arm = char:FindFirstChild("Left Arm") or char:FindFirstChild("LeftArm")
-    return arm
+    -- Find the weld/Motor6D that connects the arm
+    local weld = nil
+    for _, child in pairs(arm:GetChildren()) do
+        if child:IsA("Motor6D") or child:IsA("Weld") then
+            weld = child
+            break
+        end
+    end
+    
+    return arm, weld
 end
 
--- Main arm aiming function - FIXED: Only rotates the arm, no teleporting!
+-- Main arm aiming function - FIXED: Only modifies the weld
 local function aimArm()
     if not isActive then return end
     if not isAiming then 
@@ -393,59 +389,60 @@ local function aimArm()
         return 
     end
     
-    -- Get target character
     local targetChar = targetPlayer.Character
     if not targetChar then 
         currentTargetArm = nil
         return 
     end
     
-    -- Get target arm (closest to body)
     local targetArm = getClosestArm(targetChar)
     if not targetArm then 
         currentTargetArm = nil
         return 
     end
     
-    -- Get player's arm
-    local playerArm = getPlayerArm()
-    if not playerArm then return end
+    local playerArm, weld = getPlayerArmAndWeld()
+    if not playerArm or not weld then return end
     
-    -- Only update if target changed
     if currentTargetArm ~= targetArm then
         currentTargetArm = targetArm
     end
     
-    -- Calculate direction from player's arm to target arm
+    -- Calculate direction
     local armPos = playerArm.Position
     local targetPos = targetArm.Position
     local direction = (targetPos - armPos).unit
     
-    -- Create CFrame looking at target from arm position
+    -- Create lookAt CFrame
     local lookAtCFrame = CFrame.lookAt(armPos, targetPos)
     
-    -- Apply rotation to arm WITHOUT moving it
-    -- We keep the position the same and only change rotation
-    playerArm.CFrame = CFrame.new(armPos) * lookAtCFrame.Rotation
+    -- Get the part the arm is welded to (usually torso)
+    local parentPart = weld.Part0
+    if not parentPart then return end
     
-    -- Alternative approach: Use the arm's existing weld to rotate it properly
-    -- This prevents teleporting by working with the existing constraints
-    local weld = playerArm:FindFirstChild("Weld") or playerArm:FindFirstChild("Motor6D")
-    if weld then
-        -- Calculate the rotation needed relative to the parent part
-        local parentPart = weld.Part0 or weld.Parent
-        if parentPart and parentPart:IsA("BasePart") then
-            local parentCFrame = parentPart.CFrame
-            local relativeCFrame = parentCFrame:inverse() * lookAtCFrame
-            weld.C0 = relativeCFrame
-        end
+    -- Calculate the relative CFrame between parent and arm in the new rotation
+    local parentCFrame = parentPart.CFrame
+    
+    -- Store original C0 if not stored yet
+    if not originalWeldC0[weld] then
+        originalWeldC0[weld] = weld.C0
     end
+    
+    -- Calculate new relative CFrame
+    local relativeCFrame = parentCFrame:inverse() * lookAtCFrame
+    
+    -- Apply rotation part of the relative CFrame while keeping original position offset
+    local originalC0 = originalWeldC0[weld]
+    local newC0 = CFrame.new(originalC0.Position) * relativeCFrame.Rotation
+    
+    -- Apply the modified weld CFrame
+    weld.C0 = newC0
 end
 
 -- Run aimbot every frame
 runService.RenderStepped:Connect(aimArm)
 
--- M1 click for visual feedback on target arm
+-- M1 click for visual feedback
 mouse.Button1Down:Connect(function()
     if not isActive then return end
     if not targetPlayer then return end
@@ -453,7 +450,6 @@ mouse.Button1Down:Connect(function()
     
     local targetArm = getClosestArm(targetPlayer.Character)
     if targetArm then
-        -- Visual feedback - flash red
         local originalColor = targetArm.BrickColor
         targetArm.BrickColor = BrickColor.new("Bright red")
         task.wait(0.05)
@@ -484,4 +480,5 @@ player.CharacterAdded:Connect(function(newChar)
     character = newChar
     currentTargetArm = nil
     isAiming = false
+    originalWeldC0 = {} -- Reset weld cache
 end)
