@@ -1,5 +1,5 @@
--- JJS No Stun Hack
--- Complete UI with all requested features
+-- JJS No Stun Hack - FIXED VERSION
+-- Works with actual JJS stun mechanics
 
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
@@ -10,6 +10,67 @@ local noStunEnabled = false
 local stunAmount = 0.5
 local uiVisible = true
 local defaultStun = 0.5
+local isStunned = false
+
+-- Function to actually remove stun
+local function removeStun()
+    if not character or not humanoid then return end
+    
+    -- Method 1: Reset WalkSpeed if it's below normal (stunned)
+    if humanoid.WalkSpeed < 16 and humanoid.WalkSpeed > 0 then
+        humanoid.WalkSpeed = 16
+    end
+    
+    -- Method 2: Remove stun from JJS specific stun system
+    for _, v in pairs(character:GetDescendants()) do
+        -- Common JJS stun indicators
+        if v:IsA("BoolValue") and v.Name == "Stunned" then
+            v.Value = false
+        end
+        if v:IsA("NumberValue") and (v.Name == "StunTime" or v.Name == "StunDuration") then
+            v.Value = 0
+        end
+        if v:IsA("StringValue") and v.Name == "State" and v.Value == "Stunned" then
+            v.Value = "Idle"
+        end
+        -- Animation track stun removal
+        if v:IsA("AnimationTrack") and v.Name == "StunAnim" then
+            v:Stop()
+        end
+    end
+    
+    -- Method 3: Force movement capability
+    if humanoid:GetState() == Enum.HumanoidStateType.Physics then
+        humanoid:ChangeState(Enum.HumanoidStateType.Running)
+    end
+    if humanoid:GetState() == Enum.HumanoidStateType.FallingDown then
+        humanoid:ChangeState(Enum.HumanoidStateType.Running)
+    end
+    
+    -- Method 4: Remove any stun debuffs from character
+    local stunDebuff = character:FindFirstChild("StunDebuff")
+    if stunDebuff then
+        stunDebuff:Destroy()
+    end
+    
+    local stunEffect = character:FindFirstChild("StunEffect")
+    if stunEffect then
+        stunEffect:Destroy()
+    end
+end
+
+-- Function to apply custom stun amount
+local function applyCustomStun()
+    if not character or not humanoid then return end
+    
+    if noStunEnabled then
+        -- Keep speed at normal or higher based on slider
+        local speedMultiplier = 1 + (stunAmount * 2)
+        humanoid.WalkSpeed = math.clamp(16 * speedMultiplier, 16, 40)
+    else
+        humanoid.WalkSpeed = 16
+    end
+end
 
 -- Create ScreenGui
 local screenGui = Instance.new("ScreenGui")
@@ -18,29 +79,30 @@ screenGui.Parent = player.PlayerGui
 
 -- Main Frame
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 320, 0, 280)
-mainFrame.Position = UDim2.new(0.5, -160, 0.5, -140)
-mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-mainFrame.BackgroundTransparency = 0.15
-mainFrame.BorderSizePixel = 0
+mainFrame.Size = UDim2.new(0, 340, 0, 300)
+mainFrame.Position = UDim2.new(0.5, -170, 0.5, -150)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.BorderSizePixel = 1
+mainFrame.BorderColor3 = Color3.fromRGB(255, 215, 0)
 mainFrame.ClipsDescendants = true
 mainFrame.Parent = screenGui
 
 -- Title
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 40)
+titleLabel.Size = UDim2.new(1, 0, 0, 45)
 titleLabel.Position = UDim2.new(0, 0, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "JJS No Stun"
+titleLabel.Text = "JJS No Stun V2"
 titleLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
 titleLabel.TextScaled = true
 titleLabel.Font = Enum.Font.GothamBold
 titleLabel.Parent = mainFrame
 
--- Toggle UI Button (Close)
+-- Toggle UI Button
 local toggleUIButton = Instance.new("TextButton")
-toggleUIButton.Size = UDim2.new(0, 80, 0, 30)
-toggleUIButton.Position = UDim2.new(1, -90, 0, 5)
+toggleUIButton.Size = UDim2.new(0, 85, 0, 30)
+toggleUIButton.Position = UDim2.new(1, -95, 0, 8)
 toggleUIButton.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
 toggleUIButton.Text = "Close UI"
 toggleUIButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -50,24 +112,25 @@ toggleUIButton.Parent = mainFrame
 
 -- Toggle No Stun
 local toggleFrame = Instance.new("Frame")
-toggleFrame.Size = UDim2.new(1, -20, 0, 40)
-toggleFrame.Position = UDim2.new(0, 10, 0, 50)
+toggleFrame.Size = UDim2.new(1, -20, 0, 45)
+toggleFrame.Position = UDim2.new(0, 10, 0, 55)
 toggleFrame.BackgroundTransparency = 1
 toggleFrame.Parent = mainFrame
 
 local toggleLabel = Instance.new("TextLabel")
-toggleLabel.Size = UDim2.new(0, 120, 0, 40)
+toggleLabel.Size = UDim2.new(0, 140, 0, 45)
 toggleLabel.Position = UDim2.new(0, 0, 0, 0)
 toggleLabel.BackgroundTransparency = 1
 toggleLabel.Text = "No Stun: OFF"
 toggleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
 toggleLabel.TextScaled = true
 toggleLabel.Font = Enum.Font.GothamMedium
+toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
 toggleLabel.Parent = toggleFrame
 
 local toggleButton = Instance.new("TextButton")
-toggleButton.Size = UDim2.new(0, 80, 0, 35)
-toggleButton.Position = UDim2.new(1, -90, 0, 2.5)
+toggleButton.Size = UDim2.new(0, 85, 0, 38)
+toggleButton.Position = UDim2.new(1, -95, 0, 3.5)
 toggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
 toggleButton.Text = "Enable"
 toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -77,23 +140,24 @@ toggleButton.Parent = toggleFrame
 
 -- Slider for Stun Amount
 local sliderFrame = Instance.new("Frame")
-sliderFrame.Size = UDim2.new(1, -20, 0, 50)
-sliderFrame.Position = UDim2.new(0, 10, 0, 100)
+sliderFrame.Size = UDim2.new(1, -20, 0, 55)
+sliderFrame.Position = UDim2.new(0, 10, 0, 110)
 sliderFrame.BackgroundTransparency = 1
 sliderFrame.Parent = mainFrame
 
 local sliderLabel = Instance.new("TextLabel")
-sliderLabel.Size = UDim2.new(0, 150, 0, 20)
+sliderLabel.Size = UDim2.new(1, 0, 0, 25)
 sliderLabel.Position = UDim2.new(0, 0, 0, 0)
 sliderLabel.BackgroundTransparency = 1
 sliderLabel.Text = "Stun Amount: 0.5"
 sliderLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
 sliderLabel.TextScaled = true
 sliderLabel.Font = Enum.Font.GothamMedium
+sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
 sliderLabel.Parent = sliderFrame
 
 local slider = Instance.new("Frame")
-slider.Size = UDim2.new(1, -10, 0, 8)
+slider.Size = UDim2.new(1, -10, 0, 10)
 slider.Position = UDim2.new(0, 0, 0, 30)
 slider.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
 slider.BorderSizePixel = 0
@@ -106,8 +170,8 @@ sliderFill.BorderSizePixel = 0
 sliderFill.Parent = slider
 
 local sliderButton = Instance.new("TextButton")
-sliderButton.Size = UDim2.new(0, 16, 0, 16)
-sliderButton.Position = UDim2.new(0.5, -8, 0, -4)
+sliderButton.Size = UDim2.new(0, 18, 0, 18)
+sliderButton.Position = UDim2.new(0.5, -9, 0, -4)
 sliderButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
 sliderButton.BorderSizePixel = 0
 sliderButton.Text = ""
@@ -115,8 +179,8 @@ sliderButton.Parent = sliderFill
 
 -- Reset Button
 local resetButton = Instance.new("TextButton")
-resetButton.Size = UDim2.new(0, 120, 0, 35)
-resetButton.Position = UDim2.new(0.5, -60, 0, 170)
+resetButton.Size = UDim2.new(0, 140, 0, 38)
+resetButton.Position = UDim2.new(0.5, -70, 0, 185)
 resetButton.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
 resetButton.Text = "Reset to Default"
 resetButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -124,31 +188,20 @@ resetButton.Font = Enum.Font.GothamBold
 resetButton.TextScaled = true
 resetButton.Parent = mainFrame
 
--- UI Toggle Button (Minimized version)
+-- Mini Toggle
 local miniToggle = Instance.new("TextButton")
 miniToggle.Size = UDim2.new(0, 120, 0, 35)
 miniToggle.Position = UDim2.new(0, 20, 0.5, 100)
-miniToggle.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-miniToggle.BackgroundTransparency = 0.15
+miniToggle.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+miniToggle.BackgroundTransparency = 0.1
+miniToggle.BorderSizePixel = 1
+miniToggle.BorderColor3 = Color3.fromRGB(255, 215, 0)
 miniToggle.Text = "Show UI"
 miniToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
 miniToggle.Font = Enum.Font.GothamBold
 miniToggle.TextScaled = true
 miniToggle.Visible = false
 miniToggle.Parent = screenGui
-
--- Functions
-local function updateNoStun()
-    if noStunEnabled then
-        humanoid.WalkSpeed = 16 -- Keep speed normal
-        -- Disable stun effects
-        for _, v in pairs(character:GetDescendants()) do
-            if v:IsA("NumberValue") and v.Name == "Stun" then
-                v.Value = stunAmount
-            end
-        end
-    end
-end
 
 -- Toggle No Stun
 toggleButton.MouseButton1Click:Connect(function()
@@ -157,7 +210,10 @@ toggleButton.MouseButton1Click:Connect(function()
     toggleLabel.TextColor3 = noStunEnabled and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
     toggleButton.Text = noStunEnabled and "Disable" or "Enable"
     if noStunEnabled then
-        updateNoStun()
+        removeStun()
+        applyCustomStun()
+    else
+        humanoid.WalkSpeed = 16
     end
 end)
 
@@ -186,7 +242,7 @@ game:GetService("RunService").RenderStepped:Connect(function()
         sliderFill.Size = UDim2.new(percent, 0, 1, 0)
         sliderLabel.Text = "Stun Amount: " .. string.format("%.1f", stunAmount)
         if noStunEnabled then
-            updateNoStun()
+            applyCustomStun()
         end
     end
 end)
@@ -197,11 +253,11 @@ resetButton.MouseButton1Click:Connect(function()
     sliderFill.Size = UDim2.new(0.5, 0, 1, 0)
     sliderLabel.Text = "Stun Amount: " .. string.format("%.1f", stunAmount)
     if noStunEnabled then
-        updateNoStun()
+        applyCustomStun()
     end
 end)
 
--- Toggle UI Visibility
+-- Toggle UI
 toggleUIButton.MouseButton1Click:Connect(function()
     uiVisible = not uiVisible
     mainFrame.Visible = uiVisible
@@ -216,22 +272,41 @@ miniToggle.MouseButton1Click:Connect(function()
     toggleUIButton.Text = uiVisible and "Close UI" or "Open UI"
 end)
 
--- Character respawn handling
+-- Character respawn
 player.CharacterAdded:Connect(function(newChar)
     character = newChar
     humanoid = character:WaitForChild("Humanoid")
     wait(0.5)
     if noStunEnabled then
-        updateNoStun()
+        removeStun()
+        applyCustomStun()
     end
 end)
 
--- Main loop to keep stun disabled
+-- Main loop - constantly checks and removes stun
 game:GetService("RunService").Heartbeat:Connect(function()
     if noStunEnabled and character and humanoid then
-        updateNoStun()
+        -- Remove stun every frame if needed
+        if humanoid.WalkSpeed < 16 and humanoid.WalkSpeed > 0 then
+            humanoid.WalkSpeed = 16 * (1 + (stunAmount * 2))
+        end
+        -- Remove any stun states
+        for _, v in pairs(character:GetDescendants()) do
+            if v:IsA("BoolValue") and v.Name == "Stunned" and v.Value == true then
+                v.Value = false
+            end
+            if v:IsA("StringValue") and v.Name == "State" and v.Value == "Stunned" then
+                v.Value = "Idle"
+            end
+        end
+        -- Reset physics state
+        if humanoid:GetState() == Enum.HumanoidStateType.Physics then
+            humanoid:ChangeState(Enum.HumanoidStateType.Running)
+        end
     end
 end)
 
 -- Initial setup
 sliderFill.Size = UDim2.new(0.5, 0, 1, 0)
+removeStun()
+print("JJS No Stun loaded! Toggle it on to remove stun effects.")
