@@ -1,13 +1,10 @@
--- JJ's Battleground M1 Speed & I-Frame Exploit Script WITH SLIDERS
--- Works with most popular executors (Synapse, Krnl, ScriptWare, etc.)
+-- JJ's Battleground M1 Exploit WITH F1 TOGGLE UI
+-- Press F1 to show/hide the slider interface
 
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
 local combatModule = nil
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/7GrandDadPGN/VapeV4ForRoblox/main/UI-Libraries/Synapse%20X%20V3"))()
 
--- Find the combat module
 for _, module in ipairs(getgc(true)) do
     if type(module) == "table" and rawget(module, "M1Cooldown") then
         combatModule = module
@@ -15,150 +12,248 @@ for _, module in ipairs(getgc(true)) do
     end
 end
 
-if not combatModule then
-    warn("Combat module not found - using alternative method")
-end
+-- Create the main GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "M1ExploitGUI"
+screenGui.Parent = player.PlayerGui
 
--- Create the GUI window
-local window = library:CreateWindow("M1 Exploit Config")
-local mainTab = window:CreateTab("M1 Settings")
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 320, 0, 280)
+frame.Position = UDim2.new(0.5, -160, 0.5, -140)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+frame.BackgroundTransparency = 0.15
+frame.BorderSizePixel = 2
+frame.BorderColor3 = Color3.fromRGB(255, 50, 50)
+frame.Active = true
+frame.Draggable = true
+frame.Parent = screenGui
 
--- Variables with default values
+-- Title
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.Text = "M1 Exploit Config [F1 to toggle]"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextScaled = true
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.Parent = frame
+
+-- Current values display
+local valueLabel = Instance.new("TextLabel")
+valueLabel.Size = UDim2.new(1, 0, 0, 20)
+valueLabel.Position = UDim2.new(0, 0, 0, 30)
+valueLabel.Text = "I-Frame: 0.30s | Endlag: 0.03s | Startup: 0.02s"
+valueLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+valueLabel.TextSize = 12
+valueLabel.BackgroundTransparency = 1
+valueLabel.Parent = frame
+
+-- Status indicator
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, 0, 0, 20)
+statusLabel.Position = UDim2.new(0, 0, 0, 50)
+statusLabel.Text = "STATUS: ACTIVE"
+statusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+statusLabel.TextSize = 14
+statusLabel.BackgroundTransparency = 1
+statusLabel.Font = Enum.Font.GothamBold
+statusLabel.Parent = frame
+
+-- Variables
 local settings = {
-    iframeDuration = 0.3,
+    iframe = 0.3,
     endlag = 0.03,
     startup = 0.02,
-    animationSpeed = 3.0,
     enabled = true
 }
 
--- Apply settings function
-local function applySettings()
-    if not settings.enabled then return end
+local sliders = {}
+
+-- Function to create a slider
+local function createSlider(labelText, minVal, maxVal, defaultVal, yOffset, color, callback)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 0, 20)
+    label.Position = UDim2.new(0, 10, 0, yOffset)
+    label.Text = labelText
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextSize = 13
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.BackgroundTransparency = 1
+    label.Parent = frame
     
-    if combatModule then
-        combatModule.M1Cooldown = settings.endlag
-        combatModule.M1Startup = settings.startup
-        combatModule.M1Endlag = settings.endlag
-        combatModule.M1IFrames = true
-        combatModule.M1IFrameDuration = settings.iframeDuration
+    local valueDisplay = Instance.new("TextLabel")
+    valueDisplay.Size = UDim2.new(0, 50, 0, 20)
+    valueDisplay.Position = UDim2.new(1, -60, 0, yOffset)
+    valueDisplay.Text = string.format("%.2f", defaultVal)
+    valueDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
+    valueDisplay.TextSize = 13
+    valueDisplay.TextXAlignment = Enum.TextXAlignment.Right
+    valueDisplay.BackgroundTransparency = 1
+    valueDisplay.Parent = frame
+    
+    local sliderTrack = Instance.new("Frame")
+    sliderTrack.Size = UDim2.new(0.85, 0, 0, 8)
+    sliderTrack.Position = UDim2.new(0.05, 0, 0, yOffset + 22)
+    sliderTrack.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    sliderTrack.BorderSizePixel = 0
+    sliderTrack.Parent = frame
+    
+    local sliderFill = Instance.new("Frame")
+    sliderFill.Size = UDim2.new((defaultVal - minVal) / (maxVal - minVal), 0, 1, 0)
+    sliderFill.BackgroundColor3 = color or Color3.fromRGB(255, 50, 50)
+    sliderFill.BorderSizePixel = 0
+    sliderFill.Parent = sliderTrack
+    
+    local sliderButton = Instance.new("Frame")
+    sliderButton.Size = UDim2.new(0, 16, 0, 16)
+    sliderButton.Position = UDim2.new((defaultVal - minVal) / (maxVal - minVal), -8, 0.5, -8)
+    sliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    sliderButton.BorderSizePixel = 0
+    sliderButton.Parent = sliderTrack
+    
+    local dragging = false
+    local currentValue = defaultVal
+    
+    local function updateSlider(inputPos)
+        local relativeX = math.clamp((inputPos - sliderTrack.AbsolutePosition.X) / sliderTrack.AbsoluteSize.X, 0, 1)
+        currentValue = minVal + relativeX * (maxVal - minVal)
+        sliderFill.Size = UDim2.new(relativeX, 0, 1, 0)
+        sliderButton.Position = UDim2.new(relativeX, -8, 0.5, -8)
+        valueDisplay.Text = string.format("%.2f", currentValue)
+        callback(currentValue)
+        
+        -- Update the main value display
+        valueLabel.Text = string.format("I-Frame: %.2fs | Endlag: %.2fs | Startup: %.2fs", 
+            settings.iframe, settings.endlag, settings.startup)
     end
     
-    -- Animation speed
-    local animator = character:FindFirstChild("Animator")
-    if animator then
-        for _, track in pairs(animator:GetPlayingAnimationTracks()) do
-            if track.Name:lower():find("punch") or track.Name:lower():find("m1") then
-                track:AdjustSpeed(settings.animationSpeed)
-            end
+    sliderTrack.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            updateSlider(input.Position.X)
         end
-    end
+    end)
+    
+    sliderTrack.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            updateSlider(input.Position.X)
+        end
+    end)
+    
+    return {
+        setValue = function(val)
+            local clamped = math.clamp(val, minVal, maxVal)
+            currentValue = clamped
+            local percent = (clamped - minVal) / (maxVal - minVal)
+            sliderFill.Size = UDim2.new(percent, 0, 1, 0)
+            sliderButton.Position = UDim2.new(percent, -8, 0.5, -8)
+            valueDisplay.Text = string.format("%.2f", clamped)
+        end
+    }
 end
 
--- SLIDER: I-Frame Duration
-mainTab:CreateSlider({
-    Name = "I-Frame Duration (seconds)",
-    Min = 0,
-    Max = 1.0,
-    Default = settings.iframeDuration,
-    Color = Color3.fromRGB(255, 50, 50),
-    Increment = 0.01,
-    Callback = function(value)
-        settings.iframeDuration = value
-        applySettings()
-        print("I-Frame duration set to: " .. value .. "s")
+-- Create the three sliders
+local iframeSlider = createSlider("I-Frame Duration (invincibility)", 0, 1.0, 0.3, 80, Color3.fromRGB(255, 50, 50), function(v)
+    settings.iframe = v
+    if combatModule and settings.enabled then
+        combatModule.M1IFrameDuration = v
     end
-})
-
--- SLIDER: Endlag (cooldown between punches)
-mainTab:CreateSlider({
-    Name = "Endlag (cooldown between M1s)",
-    Min = 0.01,
-    Max = 0.5,
-    Default = settings.endlag,
-    Color = Color3.fromRGB(50, 255, 50),
-    Increment = 0.01,
-    Callback = function(value)
-        settings.endlag = value
-        applySettings()
-        print("Endlag set to: " .. value .. "s")
-    end
-})
-
--- SLIDER: Startup Speed (animation startup time)
-mainTab:CreateSlider({
-    Name = "Startup Speed (time before punch lands)",
-    Min = 0.01,
-    Max = 0.3,
-    Default = settings.startup,
-    Color = Color3.fromRGB(50, 150, 255),
-    Increment = 0.01,
-    Callback = function(value)
-        settings.startup = value
-        applySettings()
-        print("Startup set to: " .. value .. "s")
-    end
-})
-
--- SLIDER: Animation Speed Multiplier
-mainTab:CreateSlider({
-    Name = "Animation Speed Multiplier",
-    Min = 0.5,
-    Max = 10.0,
-    Default = settings.animationSpeed,
-    Color = Color3.fromRGB(255, 200, 50),
-    Increment = 0.1,
-    Callback = function(value)
-        settings.animationSpeed = value
-        applySettings()
-        print("Animation speed set to: " .. value .. "x")
-    end
-})
-
--- Toggle: Enable/Disable all modifications
-mainTab:CreateToggle({
-    Name = "Enable M1 Modifications",
-    Default = true,
-    Callback = function(state)
-        settings.enabled = state
-        if state then
-            applySettings()
-            print("M1 modifications ENABLED")
-        else
-            -- Reset to default values
-            if combatModule then
-                combatModule.M1Cooldown = 0.3
-                combatModule.M1Startup = 0.15
-                combatModule.M1Endlag = 0.2
-                combatModule.M1IFrames = false
-            end
-            print("M1 modifications DISABLED")
-        end
-    end
-})
-
--- Display current values label
-local valueDisplay = mainTab:CreateLabel("Current Values: I-Frame: " .. settings.iframeDuration .. "s | Endlag: " .. settings.endlag .. "s | Startup: " .. settings.startup .. "s")
-
--- Update label when sliders change
-local function updateLabel()
-    valueDisplay:SetText("Current Values: I-Frame: " .. settings.iframeDuration .. "s | Endlag: " .. settings.endlag .. "s | Startup: " .. settings.startup .. "s | Anim Speed: " .. settings.animationSpeed .. "x")
-end
-
--- Override slider callbacks to update label
--- (Simplified - you'd need to modify the slider creation to call updateLabel)
-
--- Apply initial settings
-applySettings()
-
--- Keep modifications active on respawn
-player.CharacterAdded:Connect(function(newChar)
-    character = newChar
-    humanoid = character:WaitForChild("Humanoid")
-    wait(0.1)
-    applySettings()
 end)
 
-print("M1 Exploit GUI loaded!")
-print("Use the sliders to adjust I-Frame, Endlag, and Startup in real-time")
-print("You should see immediate changes when sliding")
+local endlagSlider = createSlider("Endlag (cooldown between punches)", 0.01, 0.5, 0.03, 130, Color3.fromRGB(50, 255, 50), function(v)
+    settings.endlag = v
+    if combatModule and settings.enabled then
+        combatModule.M1Cooldown = v
+        combatModule.M1Endlag = v
+    end
+end)
+
+local startupSlider = createSlider("Startup Speed (punch startup time)", 0.01, 0.3, 0.02, 180, Color3.fromRGB(50, 150, 255), function(v)
+    settings.startup = v
+    if combatModule and settings.enabled then
+        combatModule.M1Startup = v
+    end
+end)
+
+-- Toggle button for enabling/disabling
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0.4, 0, 0, 30)
+toggleBtn.Position = UDim2.new(0.3, 0, 0, 230)
+toggleBtn.Text = "DISABLE"
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.TextSize = 14
+toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+toggleBtn.BorderSizePixel = 0
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.Parent = frame
+
+toggleBtn.MouseButton1Click:Connect(function()
+    settings.enabled = not settings.enabled
+    if settings.enabled then
+        toggleBtn.Text = "DISABLE"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+        statusLabel.Text = "STATUS: ACTIVE"
+        statusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+        if combatModule then
+            combatModule.M1IFrameDuration = settings.iframe
+            combatModule.M1Cooldown = settings.endlag
+            combatModule.M1Endlag = settings.endlag
+            combatModule.M1Startup = settings.startup
+            combatModule.M1IFrames = true
+        end
+    else
+        toggleBtn.Text = "ENABLE"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 255, 50)
+        statusLabel.Text = "STATUS: DISABLED"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+        if combatModule then
+            combatModule.M1IFrames = false
+        end
+    end
+end)
+
+-- F1 TOGGLE - Show/Hide UI
+local uiVisible = true
+game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.F1 then
+        uiVisible = not uiVisible
+        screenGui.Enabled = uiVisible
+        if uiVisible then
+            print("UI SHOWN")
+        else
+            print("UI HIDDEN")
+        end
+    end
+end)
+
+-- Apply initial settings
+if combatModule then
+    combatModule.M1IFrameDuration = settings.iframe
+    combatModule.M1Cooldown = settings.endlag
+    combatModule.M1Endlag = settings.endlag
+    combatModule.M1Startup = settings.startup
+    combatModule.M1IFrames = true
+end
+
+-- Keep on respawn
+player.CharacterAdded:Connect(function(newChar)
+    character = newChar
+    wait(0.2)
+    if combatModule and settings.enabled then
+        combatModule.M1IFrameDuration = settings.iframe
+        combatModule.M1Cooldown = settings.endlag
+        combatModule.M1Endlag = settings.endlag
+        combatModule.M1Startup = settings.startup
+        combatModule.M1IFrames = true
+    end
+end)
+
+print("M1 Exploit loaded! Press F1 to toggle the UI on/off")
+print("Drag the sliders to adjust values in real-time")
