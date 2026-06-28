@@ -1,69 +1,118 @@
--- LocalScript inside StarterGui or a ScreenGui
-
+-- LocalScript
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
-local mouse = player:GetMouse()
-local targetService = game:GetService("Players")
-local runService = game:GetService("RunService")
 local userInputService = game:GetService("UserInputService")
 
--- Create UI
-local screenGui = Instance.new("ScreenGui")
-screenGui.Parent = player.PlayerGui
-screenGui.ResetOnSpawn = false
+-- CONFIG - Change these
+local defaultKeybind = Enum.KeyCode.F -- Default toggle key
 
--- Main Frame - Clean Modern Design
+-- Create GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "HitboxController"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player.PlayerGui
+
+-- Main Frame
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 340, 0, 300)
-mainFrame.Position = UDim2.new(0.5, -170, 0.5, -150)
-mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+mainFrame.Size = UDim2.new(0, 320, 0, 280)
+mainFrame.Position = UDim2.new(0.5, -160, 0.5, -140)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 mainFrame.BackgroundTransparency = 0.05
 mainFrame.BorderSizePixel = 0
-mainFrame.Visible = false
 mainFrame.Parent = screenGui
 
--- Main Corner
-local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 16)
-mainCorner.Parent = mainFrame
+-- Corner
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 14)
+corner.Parent = mainFrame
 
 -- Title
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 40)
-title.Position = UDim2.new(0, 0, 0, 5)
+title.Size = UDim2.new(1, 0, 0, 45)
 title.BackgroundTransparency = 1
-title.Text = "🎯 ARM AIMBOT"
+title.Text = "🎯 HITBOX CONTROLLER"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.TextScaled = true
 title.Font = Enum.Font.GothamBold
 title.Parent = mainFrame
 
--- Divider Line
+-- Divider
 local divider = Instance.new("Frame")
 divider.Size = UDim2.new(0.9, 0, 0, 1)
-divider.Position = UDim2.new(0.05, 0, 0, 45)
+divider.Position = UDim2.new(0.05, 0, 0, 48)
 divider.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
 divider.BorderSizePixel = 0
 divider.Parent = mainFrame
 
--- Toggle Section
-local toggleLabel = Instance.new("TextLabel")
-toggleLabel.Size = UDim2.new(0, 120, 0, 30)
-toggleLabel.Position = UDim2.new(0, 15, 0, 55)
-toggleLabel.BackgroundTransparency = 1
-toggleLabel.Text = "AIMBOT STATUS:"
-toggleLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
-toggleLabel.TextScaled = true
-toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-toggleLabel.Font = Enum.Font.Gotham
-toggleLabel.Parent = mainFrame
+-- Status label
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, -30, 0, 30)
+statusLabel.Position = UDim2.new(0, 15, 0, 58)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "STATUS: OFF"
+statusLabel.TextColor3 = Color3.fromRGB(200, 60, 60)
+statusLabel.TextScaled = true
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.Font = Enum.Font.GothamBold
+statusLabel.Parent = mainFrame
 
--- Toggle Button (F1)
+-- Size slider label
+local sizeLabel = Instance.new("TextLabel")
+sizeLabel.Size = UDim2.new(0, 200, 0, 25)
+sizeLabel.Position = UDim2.new(0, 15, 0, 100)
+sizeLabel.BackgroundTransparency = 1
+sizeLabel.Text = "HITBOX SIZE: 100%"
+sizeLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
+sizeLabel.TextScaled = true
+sizeLabel.TextXAlignment = Enum.TextXAlignment.Left
+sizeLabel.Font = Enum.Font.Gotham
+sizeLabel.Parent = mainFrame
+
+-- Slider
+local sliderBg = Instance.new("Frame")
+sliderBg.Size = UDim2.new(0.85, 0, 0, 8)
+sliderBg.Position = UDim2.new(0.075, 0, 0, 132)
+sliderBg.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+sliderBg.BorderSizePixel = 0
+sliderBg.Parent = mainFrame
+local sliderCorner = Instance.new("UICorner")
+sliderCorner.CornerRadius = UDim.new(0, 4)
+sliderCorner.Parent = sliderBg
+
+local sliderFill = Instance.new("Frame")
+sliderFill.Size = UDim2.new(0.5, 0, 1, 0)
+sliderFill.BackgroundColor3 = Color3.fromRGB(80, 180, 255)
+sliderFill.BorderSizePixel = 0
+sliderFill.Parent = sliderBg
+local fillCorner = Instance.new("UICorner")
+fillCorner.CornerRadius = UDim.new(0, 4)
+fillCorner.Parent = sliderFill
+
+-- Slider values
+local sliderValue = 1.0 -- 1.0 = normal, 0.3 = tiny
+local minSize = 0.2
+local maxSize = 1.0
+
+-- Keybind button
+local keybindBtn = Instance.new("TextButton")
+keybindBtn.Size = UDim2.new(0, 120, 0, 32)
+keybindBtn.Position = UDim2.new(0.5, -60, 0, 155)
+keybindBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+keybindBtn.Text = "TOGGLE KEY: F"
+keybindBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+keybindBtn.TextScaled = true
+keybindBtn.Font = Enum.Font.Gotham
+keybindBtn.Parent = mainFrame
+local keybindCorner = Instance.new("UICorner")
+keybindCorner.CornerRadius = UDim.new(0, 8)
+keybindCorner.Parent = keybindBtn
+
+-- Toggle button
 local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0, 100, 0, 34)
-toggleBtn.Position = UDim2.new(0, 150, 0, 53)
+toggleBtn.Size = UDim2.new(0.4, 0, 0, 40)
+toggleBtn.Position = UDim2.new(0.3, 0, 0, 205)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
-toggleBtn.Text = "OFF"
+toggleBtn.Text = "TOGGLE OFF"
 toggleBtn.TextColor3 = Color3.new(1, 1, 1)
 toggleBtn.TextScaled = true
 toggleBtn.Font = Enum.Font.GothamBold
@@ -72,418 +121,277 @@ local toggleCorner = Instance.new("UICorner")
 toggleCorner.CornerRadius = UDim.new(0, 8)
 toggleCorner.Parent = toggleBtn
 
--- Keybind Hint for F1
-local f1Hint = Instance.new("TextLabel")
-f1Hint.Size = UDim2.new(0, 80, 0, 20)
-f1Hint.Position = UDim2.new(0, 260, 0, 60)
-f1Hint.BackgroundTransparency = 1
-f1Hint.Text = "[F1]"
-f1Hint.TextColor3 = Color3.fromRGB(100, 200, 255)
-f1Hint.TextScaled = true
-f1Hint.Font = Enum.Font.GothamBold
-f1Hint.Parent = mainFrame
+-- Visualizer toggle
+local visualizerBtn = Instance.new("TextButton")
+visualizerBtn.Size = UDim2.new(0.4, 0, 0, 40)
+visualizerBtn.Position = UDim2.new(0.55, 0, 0, 205)
+visualizerBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+visualizerBtn.Text = "VISUAL: OFF"
+visualizerBtn.TextColor3 = Color3.new(1, 1, 1)
+visualizerBtn.TextScaled = true
+visualizerBtn.Font = Enum.Font.GothamBold
+visualizerBtn.Parent = mainFrame
+local visualizerCorner = Instance.new("UICorner")
+visualizerCorner.CornerRadius = UDim.new(0, 8)
+visualizerCorner.Parent = visualizerBtn
 
--- Target Name Input
-local nameLabel = Instance.new("TextLabel")
-nameLabel.Size = UDim2.new(0, 140, 0, 25)
-nameLabel.Position = UDim2.new(0, 15, 0, 105)
-nameLabel.BackgroundTransparency = 1
-nameLabel.Text = "TARGET NAME:"
-nameLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
-nameLabel.TextScaled = true
-nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-nameLabel.Font = Enum.Font.Gotham
-nameLabel.Parent = mainFrame
-
-local nameBox = Instance.new("TextBox")
-nameBox.Size = UDim2.new(0, 170, 0, 30)
-nameBox.Position = UDim2.new(0, 155, 0, 102)
-nameBox.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
-nameBox.Text = ""
-nameBox.PlaceholderText = "Enter username..."
-nameBox.TextColor3 = Color3.new(1, 1, 1)
-nameBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 130)
-nameBox.TextScaled = true
-nameBox.Font = Enum.Font.Gotham
-nameBox.ClearTextOnFocus = false
-nameBox.Parent = mainFrame
-local nameCorner = Instance.new("UICorner")
-nameCorner.CornerRadius = UDim.new(0, 6)
-nameCorner.Parent = nameBox
-
--- Server Target Selection
-local serverLabel = Instance.new("TextLabel")
-serverLabel.Size = UDim2.new(0, 180, 0, 25)
-serverLabel.Position = UDim2.new(0, 15, 0, 145)
-serverLabel.BackgroundTransparency = 1
-serverLabel.Text = "SELECT FROM SERVER:"
-serverLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
-serverLabel.TextScaled = true
-serverLabel.TextXAlignment = Enum.TextXAlignment.Left
-serverLabel.Font = Enum.Font.Gotham
-serverLabel.Parent = mainFrame
-
-local dropdown = Instance.new("TextButton")
-dropdown.Size = UDim2.new(0, 170, 0, 32)
-dropdown.Position = UDim2.new(0, 155, 0, 142)
-dropdown.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
-dropdown.Text = "▼ Select player..."
-dropdown.TextColor3 = Color3.fromRGB(200, 200, 210)
-dropdown.TextScaled = true
-dropdown.Font = Enum.Font.Gotham
-dropdown.Parent = mainFrame
-local dropdownCorner = Instance.new("UICorner")
-dropdownCorner.CornerRadius = UDim.new(0, 6)
-dropdownCorner.Parent = dropdown
-
--- Dropdown List (Scrollable)
-local listFrame = Instance.new("ScrollingFrame")
-listFrame.Size = UDim2.new(0, 170, 0, 120)
-listFrame.Position = UDim2.new(0, 155, 0, 178)
-listFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
-listFrame.BorderSizePixel = 0
-listFrame.Visible = false
-listFrame.ScrollBarThickness = 4
-listFrame.Parent = mainFrame
-local listCorner = Instance.new("UICorner")
-listCorner.CornerRadius = UDim.new(0, 6)
-listCorner.Parent = listFrame
-
--- "None" Option
-local noneOption = Instance.new("TextButton")
-noneOption.Size = UDim2.new(1, 0, 0, 32)
-noneOption.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-noneOption.Text = "🚫 None (Target nobody)"
-noneOption.TextColor3 = Color3.fromRGB(255, 200, 200)
-noneOption.TextScaled = true
-noneOption.Font = Enum.Font.Gotham
-noneOption.Parent = listFrame
-local noneCorner = Instance.new("UICorner")
-noneCorner.CornerRadius = UDim.new(0, 4)
-noneCorner.Parent = noneOption
-
-noneOption.MouseButton1Click:Connect(function()
-    targetPlayer = nil
-    dropdown.Text = "▼ None selected"
-    listFrame.Visible = false
-end)
-
--- Status Label
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Size = UDim2.new(1, -30, 0, 25)
-statusLabel.Position = UDim2.new(0, 15, 0, 225)
-statusLabel.BackgroundTransparency = 1
-statusLabel.Text = "⚡ Aiming at: None"
-statusLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
-statusLabel.TextScaled = true
-statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-statusLabel.Font = Enum.Font.Gotham
-statusLabel.Parent = mainFrame
-
--- Keybind Hint
+-- Keybind hint
 local hintLabel = Instance.new("TextLabel")
-hintLabel.Size = UDim2.new(1, 0, 0, 20)
-hintLabel.Position = UDim2.new(0, 0, 0, 270)
+hintLabel.Size = UDim2.new(1, 0, 0, 18)
+hintLabel.Position = UDim2.new(0, 0, 0, 258)
 hintLabel.BackgroundTransparency = 1
-hintLabel.Text = "Press V to toggle UI | F1 to toggle aimbot | Hold LMB to aim"
-hintLabel.TextColor3 = Color3.fromRGB(100, 100, 110)
+hintLabel.Text = "Press V to toggle this UI"
+hintLabel.TextColor3 = Color3.fromRGB(80, 80, 90)
 hintLabel.TextScaled = true
 hintLabel.Font = Enum.Font.Gotham
 hintLabel.Parent = mainFrame
 
--- Variables
-local targetPlayer = nil
+-- State variables
 local isActive = false
-local isAiming = false
-local bodyGyro = nil
+local showVisualizer = false
+local currentKeybind = defaultKeybind
+local waitingForKey = false
+local visualizerParts = {}
+local originalSizes = {}
 
--- Get character
-local function getCharacter()
-    character = player.Character or player.CharacterAdded:Wait()
-    return character
+-- Get all parts and their original sizes
+local function storeOriginalSizes(char)
+    originalSizes = {}
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            originalSizes[part] = part.Size
+        end
+    end
 end
 
--- Toggle UI visibility (V key)
-local uiToggleKey = Enum.KeyCode.V
-local uiVisible = false
-
-userInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
+-- Scale character hitbox
+local function scaleHitbox(char, scale)
+    if not char then return end
     
-    if input.KeyCode == uiToggleKey then
-        uiVisible = not uiVisible
-        mainFrame.Visible = uiVisible
+    -- Store original sizes if not stored
+    if next(originalSizes) == nil then
+        storeOriginalSizes(char)
     end
     
-    if input.KeyCode == Enum.KeyCode.F1 then
-        isActive = not isActive
-        toggleBtn.BackgroundColor3 = isActive and Color3.fromRGB(60, 200, 100) or Color3.fromRGB(220, 60, 60)
-        toggleBtn.Text = isActive and "ON" or "OFF"
-        
-        if isActive then
-            statusLabel.Text = "⚡ Aiming at: " .. (targetPlayer and targetPlayer.Name or "None") .. " 🟢 ACTIVE"
-        else
-            statusLabel.Text = string.gsub(statusLabel.Text, " 🟢 ACTIVE", "")
-            isAiming = false
-            if bodyGyro then
-                bodyGyro.Enabled = false
+    -- Scale all BaseParts
+    for part, origSize in pairs(originalSizes) do
+        if part and part.Parent and part:IsA("BasePart") then
+            part.Size = origSize * scale
+        end
+    end
+    
+    -- Scale Motor6D joints for proper limb positioning
+    for _, v in pairs(char:GetDescendants()) do
+        if v:IsA("Motor6D") then
+            local c0 = v.C0
+            local c1 = v.C1
+            v.C0 = CFrame.new(c0.Position * scale) * CFrame.Angles(c0:ToEulerAnglesXYZ())
+            v.C1 = CFrame.new(c1.Position * scale) * CFrame.Angles(c1:ToEulerAnglesXYZ())
+        end
+    end
+end
+
+-- Visualizer: Show bounding box around character
+local function updateVisualizer(char, enabled)
+    -- Clear old visualizer
+    for _, part in pairs(visualizerParts) do
+        part:Destroy()
+    end
+    visualizerParts = {}
+    
+    if not enabled or not char then return end
+    
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    -- Create a bounding box visual
+    local size = hrp.Size * 1.5
+    local visual = Instance.new("SelectionBox")
+    visual.Adornee = hrp
+    visual.Color3 = Color3.fromRGB(0, 200, 255)
+    visual.Transparency = 0.5
+    visual.LineThickness = 0.05
+    visual.Parent = hrp
+    table.insert(visualizerParts, visual)
+    
+    -- Add corner markers
+    for x = -1, 1, 2 do
+        for y = -1, 1, 2 do
+            for z = -1, 1, 2 do
+                local marker = Instance.new("Part")
+                marker.Size = Vector3.new(0.2, 0.2, 0.2)
+                marker.Position = hrp.Position + Vector3.new(x * size.X/2, y * size.Y/2, z * size.Z/2)
+                marker.Anchored = true
+                marker.CanCollide = false
+                marker.Transparency = 0.3
+                marker.BrickColor = BrickColor.new("Cyan")
+                marker.Material = Enum.Material.Neon
+                marker.Parent = workspace
+                table.insert(visualizerParts, marker)
+                
+                -- Update marker position every frame
+                local conn
+                conn = game:GetService("RunService").RenderStepped:Connect(function()
+                    if not marker.Parent then
+                        conn:Disconnect()
+                        return
+                    end
+                    local newHrp = char:FindFirstChild("HumanoidRootPart")
+                    if newHrp then
+                        marker.Position = newHrp.Position + Vector3.new(x * size.X/2, y * size.Y/2, z * size.Z/2)
+                    end
+                end)
+                table.insert(visualizerParts, conn)
+            end
+        end
+    end
+end
+
+-- Apply current settings
+local function applySettings()
+    local char = player.Character
+    if not char then return end
+    
+    if isActive then
+        scaleHitbox(char, sliderValue)
+    else
+        -- Reset to original
+        for part, origSize in pairs(originalSizes) do
+            if part and part.Parent and part:IsA("BasePart") then
+                part.Size = origSize
+            end
+        end
+        -- Reset joints
+        for _, v in pairs(char:GetDescendants()) do
+            if v:IsA("Motor6D") then
+                v.C0 = v.C0
+                v.C1 = v.C1
             end
         end
     end
     
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        if isActive and targetPlayer then
-            isAiming = true
+    updateVisualizer(char, showVisualizer and isActive)
+end
+
+-- Handle character respawn
+player.CharacterAdded:Connect(function(newChar)
+    character = newChar
+    originalSizes = {}
+    task.wait(0.1)
+    storeOriginalSizes(newChar)
+    if isActive then
+        applySettings()
+    end
+end)
+
+-- Initial storage
+task.wait(0.5)
+storeOriginalSizes(character)
+
+-- Toggle function
+local function toggleHitbox()
+    isActive = not isActive
+    toggleBtn.Text = isActive and "TOGGLE ON" or "TOGGLE OFF"
+    toggleBtn.BackgroundColor3 = isActive and Color3.fromRGB(60, 200, 100) or Color3.fromRGB(220, 60, 60)
+    statusLabel.Text = isActive and "STATUS: ON" or "STATUS: OFF"
+    statusLabel.TextColor3 = isActive and Color3.fromRGB(60, 200, 100) or Color3.fromRGB(200, 60, 60)
+    
+    applySettings()
+end
+
+-- Keybind handling
+userInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    
+    -- UI Toggle (V)
+    if input.KeyCode == Enum.KeyCode.V then
+        mainFrame.Visible = not mainFrame.Visible
+    end
+    
+    -- Waiting for keybind
+    if waitingForKey then
+        if input.KeyCode ~= Enum.KeyCode.Unknown then
+            currentKeybind = input.KeyCode
+            keybindBtn.Text = "TOGGLE KEY: " .. string.sub(tostring(currentKeybind), 12)
+            waitingForKey = false
+            keybindBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
         end
+        return
+    end
+    
+    -- Toggle key
+    if input.KeyCode == currentKeybind then
+        toggleHitbox()
+    end
+end)
+
+-- Slider interaction
+local dragging = false
+local function updateSlider(mousePos)
+    local relativeX = mousePos.X - sliderBg.AbsolutePosition.X
+    local width = sliderBg.AbsoluteSize.X
+    local percent = math.clamp(relativeX / width, 0, 1)
+    sliderFill.Size = UDim2.new(percent, 0, 1, 0)
+    sliderValue = minSize + (maxSize - minSize) * percent
+    sizeLabel.Text = "HITBOX SIZE: " .. math.round(sliderValue * 100) .. "%"
+    
+    if isActive then
+        applySettings()
+    end
+end
+
+sliderBg.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        updateSlider(input.Position)
+    end
+end)
+
+userInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        updateSlider(input.Position)
     end
 end)
 
 userInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        isAiming = false
-        if bodyGyro then
-            bodyGyro.Enabled = false
+        dragging = false
+    end
+end)
+
+-- Button connections
+toggleBtn.MouseButton1Click:Connect(toggleHitbox)
+
+visualizerBtn.MouseButton1Click:Connect(function()
+    showVisualizer = not showVisualizer
+    visualizerBtn.Text = showVisualizer and "VISUAL: ON" or "VISUAL: OFF"
+    visualizerBtn.BackgroundColor3 = showVisualizer and Color3.fromRGB(60, 200, 100) or Color3.fromRGB(40, 40, 50)
+    applySettings()
+end)
+
+keybindBtn.MouseButton1Click:Connect(function()
+    waitingForKey = true
+    keybindBtn.BackgroundColor3 = Color3.fromRGB(200, 200, 60)
+    keybindBtn.Text = "PRESS ANY KEY..."
+end)
+
+-- Cleanup
+game:GetService("RunService").RenderStepped:Connect(function()
+    if showVisualizer and isActive then
+        local char = player.Character
+        if char then
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                for _, part in pairs(visualizerParts) do
+                    if part:IsA("Part") then
+                        -- Update positions in the connections instead
+                    end
+                end
+            end
         end
     end
 end)
 
--- Function to update dropdown list
-local function updateDropdown()
-    for _, child in pairs(listFrame:GetChildren()) do
-        if child ~= noneOption and child:IsA("TextButton") then
-            child:Destroy()
-        end
-    end
-    
-    local players = targetService:GetPlayers()
-    local count = 1
-    for _, p in pairs(players) do
-        if p ~= player and p.Character then
-            local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, 0, 0, 32)
-            btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-            btn.Text = p.Name
-            btn.TextColor3 = Color3.fromRGB(220, 220, 230)
-            btn.TextScaled = true
-            btn.Font = Enum.Font.Gotham
-            btn.Parent = listFrame
-            
-            local btnCorner = Instance.new("UICorner")
-            btnCorner.CornerRadius = UDim.new(0, 4)
-            btnCorner.Parent = btn
-            
-            btn.Position = UDim2.new(0, 0, 0, count * 34)
-            
-            btn.MouseButton1Click:Connect(function()
-                targetPlayer = p
-                dropdown.Text = "▼ " .. p.Name
-                listFrame.Visible = false
-                statusLabel.Text = "⚡ Aiming at: " .. p.Name .. (isActive and " 🟢 ACTIVE" or "")
-            end)
-            
-            count = count + 1
-        end
-    end
-    
-    if count == 1 then
-        statusLabel.Text = "⚡ No players found"
-    end
-    
-    listFrame.CanvasSize = UDim2.new(0, 0, 0, count * 36 + 10)
-end
-
--- Dropdown toggle
-dropdown.MouseButton1Click:Connect(function()
-    listFrame.Visible = not listFrame.Visible
-    if listFrame.Visible then
-        updateDropdown()
-    end
-end)
-
--- Find target from name input
-local function getTargetFromName(name)
-    if name == "" or name == nil then return nil end
-    for _, p in pairs(targetService:GetPlayers()) do
-        if p.Name:lower():find(name:lower()) then
-            return p
-        end
-    end
-    return nil
-end
-
-nameBox.FocusLost:Connect(function()
-    local name = nameBox.Text
-    if name ~= "" then
-        local found = getTargetFromName(name)
-        if found then
-            targetPlayer = found
-            dropdown.Text = "▼ " .. found.Name
-            statusLabel.Text = "⚡ Aiming at: " .. found.Name .. (isActive and " 🟢 ACTIVE" or "")
-        else
-            statusLabel.Text = "⚡ Player not found"
-        end
-    end
-end)
-
--- Function to get closest arm (target's arm)
-local function getClosestArm(character)
-    if not character then return nil end
-    
-    local leftArm = character:FindFirstChild("Left Arm") or character:FindFirstChild("LeftArm")
-    local rightArm = character:FindFirstChild("Right Arm") or character:FindFirstChild("RightArm")
-    
-    if not leftArm and not rightArm then return nil end
-    
-    if leftArm and not rightArm then return leftArm end
-    if rightArm and not leftArm then return rightArm end
-    
-    local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
-    if not torso then return leftArm end
-    
-    local leftDist = (leftArm.Position - torso.Position).Magnitude
-    local rightDist = (rightArm.Position - torso.Position).Magnitude
-    
-    if leftDist <= rightDist then
-        return leftArm
-    else
-        return rightArm
-    end
-end
-
--- Function to get player's arm
-local function getPlayerArm()
-    local char = getCharacter()
-    if not char then return nil end
-    
-    local arm = char:FindFirstChild("Right Arm") or char:FindFirstChild("RightArm")
-    if arm then return arm end
-    
-    arm = char:FindFirstChild("Left Arm") or char:FindFirstChild("LeftArm")
-    return arm
-end
-
--- Create BodyGyro for the arm
-local function setupBodyGyro(arm)
-    if bodyGyro then
-        bodyGyro:Destroy()
-        bodyGyro = nil
-    end
-    
-    bodyGyro = Instance.new("BodyGyro")
-    bodyGyro.Parent = arm
-    bodyGyro.D = 500
-    bodyGyro.P = 10000
-    bodyGyro.MaxTorque = Vector3.new(4000, 4000, 4000)
-    bodyGyro.Enabled = false
-    return bodyGyro
-end
-
--- Main arm aiming function using BodyGyro
-local function aimArm()
-    if not isActive then return end
-    if not isAiming then 
-        if bodyGyro then
-            bodyGyro.Enabled = false
-        end
-        return 
-    end
-    if not targetPlayer then 
-        if bodyGyro then
-            bodyGyro.Enabled = false
-        end
-        return 
-    end
-    
-    local targetChar = targetPlayer.Character
-    if not targetChar then 
-        if bodyGyro then
-            bodyGyro.Enabled = false
-        end
-        return 
-    end
-    
-    local targetArm = getClosestArm(targetChar)
-    if not targetArm then 
-        if bodyGyro then
-            bodyGyro.Enabled = false
-        end
-        return 
-    end
-    
-    local playerArm = getPlayerArm()
-    if not playerArm then return end
-    
-    -- Setup BodyGyro if needed
-    if not bodyGyro or bodyGyro.Parent ~= playerArm then
-        setupBodyGyro(playerArm)
-    end
-    
-    -- Calculate direction to target arm
-    local direction = (targetArm.Position - playerArm.Position).unit
-    
-    -- Enable BodyGyro
-    bodyGyro.Enabled = true
-    
-    -- Set the CFrame to look at the target
-    bodyGyro.CFrame = CFrame.lookAt(Vector3.new(0,0,0), direction)
-end
-
--- Run aimbot every frame
-runService.RenderStepped:Connect(aimArm)
-
--- M1 click for visual feedback on target arm
-mouse.Button1Down:Connect(function()
-    if not isActive then return end
-    if not targetPlayer then return end
-    if not targetPlayer.Character then return end
-    
-    local targetArm = getClosestArm(targetPlayer.Character)
-    if targetArm then
-        local originalColor = targetArm.BrickColor
-        targetArm.BrickColor = BrickColor.new("Bright red")
-        task.wait(0.05)
-        targetArm.BrickColor = originalColor
-    end
-end)
-
--- Cleanup for disconnected players
-targetService.PlayerRemoving:Connect(function(playerLeft)
-    if targetPlayer and targetPlayer == playerLeft then
-        targetPlayer = nil
-        dropdown.Text = "▼ Select player..."
-        statusLabel.Text = "⚡ Aiming at: None"
-        isAiming = false
-        if bodyGyro then
-            bodyGyro.Enabled = false
-        end
-    end
-end)
-
-targetService.PlayerAdded:Connect(function()
-    if listFrame.Visible then
-        updateDropdown()
-    end
-end)
-
--- Handle character respawn
-player.CharacterAdded:Connect(function(newChar)
-    character = newChar
-    isAiming = false
-    if bodyGyro then
-        bodyGyro:Destroy()
-        bodyGyro = nil
-    end
-    task.wait(0.5)
-    -- Re-setup BodyGyro on new arm
-    local arm = getPlayerArm()
-    if arm then
-        setupBodyGyro(arm)
-    end
-end)
-
--- Initial setup
-task.wait(0.5)
-local arm = getPlayerArm()
-if arm then
-    setupBodyGyro(arm)
-end
+print("✅ Hitbox Controller loaded!")
+print("🔑 Toggle: " .. tostring(currentKeybind))
+print("📱 UI Toggle: V")
