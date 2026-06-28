@@ -5,6 +5,7 @@ local mouse = player:GetMouse()
 local targetService = game:GetService("Players")
 local runService = game:GetService("RunService")
 local camera = workspace.CurrentCamera
+local userInputService = game:GetService("UserInputService")
 
 -- Create UI
 local screenGui = Instance.new("ScreenGui")
@@ -13,8 +14,8 @@ screenGui.ResetOnSpawn = false
 
 -- Main Frame - Clean Modern Design
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 340, 0, 280)
-mainFrame.Position = UDim2.new(0.5, -170, 0.5, -140)
+mainFrame.Size = UDim2.new(0, 340, 0, 300)
+mainFrame.Position = UDim2.new(0.5, -170, 0.5, -150)
 mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 mainFrame.BackgroundTransparency = 0.05
 mainFrame.BorderSizePixel = 0
@@ -61,17 +62,17 @@ local toggleLabel = Instance.new("TextLabel")
 toggleLabel.Size = UDim2.new(0, 120, 0, 30)
 toggleLabel.Position = UDim2.new(0, 15, 0, 55)
 toggleLabel.BackgroundTransparency = 1
-toggleLabel.Text = "STATUS:"
+toggleLabel.Text = "AIMBOT STATUS:"
 toggleLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
 toggleLabel.TextScaled = true
 toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
 toggleLabel.Font = Enum.Font.Gotham
 toggleLabel.Parent = mainFrame
 
--- Toggle Button
+-- Toggle Button (F1)
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0, 100, 0, 34)
-toggleBtn.Position = UDim2.new(0, 135, 0, 53)
+toggleBtn.Position = UDim2.new(0, 150, 0, 53)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
 toggleBtn.Text = "OFF"
 toggleBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -82,10 +83,21 @@ local toggleCorner = Instance.new("UICorner")
 toggleCorner.CornerRadius = UDim.new(0, 8)
 toggleCorner.Parent = toggleBtn
 
+-- Keybind Hint for F1
+local f1Hint = Instance.new("TextLabel")
+f1Hint.Size = UDim2.new(0, 80, 0, 20)
+f1Hint.Position = UDim2.new(0, 260, 0, 60)
+f1Hint.BackgroundTransparency = 1
+f1Hint.Text = "[F1]"
+f1Hint.TextColor3 = Color3.fromRGB(100, 200, 255)
+f1Hint.TextScaled = true
+f1Hint.Font = Enum.Font.GothamBold
+f1Hint.Parent = mainFrame
+
 -- Target Name Input
 local nameLabel = Instance.new("TextLabel")
 nameLabel.Size = UDim2.new(0, 140, 0, 25)
-nameLabel.Position = UDim2.new(0, 15, 0, 100)
+nameLabel.Position = UDim2.new(0, 15, 0, 105)
 nameLabel.BackgroundTransparency = 1
 nameLabel.Text = "TARGET NAME:"
 nameLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
@@ -96,7 +108,7 @@ nameLabel.Parent = mainFrame
 
 local nameBox = Instance.new("TextBox")
 nameBox.Size = UDim2.new(0, 170, 0, 30)
-nameBox.Position = UDim2.new(0, 155, 0, 97)
+nameBox.Position = UDim2.new(0, 155, 0, 102)
 nameBox.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 nameBox.Text = ""
 nameBox.PlaceholderText = "Enter username..."
@@ -113,7 +125,7 @@ nameCorner.Parent = nameBox
 -- Server Target Selection
 local serverLabel = Instance.new("TextLabel")
 serverLabel.Size = UDim2.new(0, 180, 0, 25)
-serverLabel.Position = UDim2.new(0, 15, 0, 140)
+serverLabel.Position = UDim2.new(0, 15, 0, 145)
 serverLabel.BackgroundTransparency = 1
 serverLabel.Text = "SELECT FROM SERVER:"
 serverLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
@@ -124,7 +136,7 @@ serverLabel.Parent = mainFrame
 
 local dropdown = Instance.new("TextButton")
 dropdown.Size = UDim2.new(0, 170, 0, 32)
-dropdown.Position = UDim2.new(0, 155, 0, 137)
+dropdown.Position = UDim2.new(0, 155, 0, 142)
 dropdown.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
 dropdown.Text = "▼ Select player..."
 dropdown.TextColor3 = Color3.fromRGB(200, 200, 210)
@@ -138,7 +150,7 @@ dropdownCorner.Parent = dropdown
 -- Dropdown List (Scrollable)
 local listFrame = Instance.new("ScrollingFrame")
 listFrame.Size = UDim2.new(0, 170, 0, 120)
-listFrame.Position = UDim2.new(0, 155, 0, 173)
+listFrame.Position = UDim2.new(0, 155, 0, 178)
 listFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
 listFrame.BorderSizePixel = 0
 listFrame.Visible = false
@@ -170,7 +182,7 @@ end)
 -- Status Label
 local statusLabel = Instance.new("TextLabel")
 statusLabel.Size = UDim2.new(1, -30, 0, 25)
-statusLabel.Position = UDim2.new(0, 15, 0, 210)
+statusLabel.Position = UDim2.new(0, 15, 0, 225)
 statusLabel.BackgroundTransparency = 1
 statusLabel.Text = "⚡ Aiming at: None"
 statusLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
@@ -182,9 +194,9 @@ statusLabel.Parent = mainFrame
 -- Keybind Hint
 local hintLabel = Instance.new("TextLabel")
 hintLabel.Size = UDim2.new(1, 0, 0, 20)
-hintLabel.Position = UDim2.new(0, 0, 0, 250)
+hintLabel.Position = UDim2.new(0, 0, 0, 270)
 hintLabel.BackgroundTransparency = 1
-hintLabel.Text = "Press V to toggle UI"
+hintLabel.Text = "Press V to toggle UI | F1 to toggle aimbot | Hold LMB to aim"
 hintLabel.TextColor3 = Color3.fromRGB(100, 100, 110)
 hintLabel.TextScaled = true
 hintLabel.Font = Enum.Font.Gotham
@@ -195,16 +207,51 @@ local targetPlayer = nil
 local isActive = false
 local currentTarget = nil
 local aimPart = nil
+local isAiming = false
 
--- Toggle UI visibility
+-- Toggle UI visibility (V key)
 local uiToggleKey = Enum.KeyCode.V
 local uiVisible = false
 
-game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
+userInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
+    
+    -- UI Toggle (V)
     if input.KeyCode == uiToggleKey then
         uiVisible = not uiVisible
         mainFrame.Visible = uiVisible
+    end
+    
+    -- Aimbot Toggle (F1)
+    if input.KeyCode == Enum.KeyCode.F1 then
+        isActive = not isActive
+        toggleBtn.BackgroundColor3 = isActive and Color3.fromRGB(60, 200, 100) or Color3.fromRGB(220, 60, 60)
+        toggleBtn.Text = isActive and "ON" or "OFF"
+        
+        if isActive then
+            statusLabel.Text = "⚡ Aiming at: " .. (targetPlayer and targetPlayer.Name or "None") .. " 🟢 ACTIVE"
+        else
+            statusLabel.Text = string.gsub(statusLabel.Text, " 🟢 ACTIVE", "")
+            currentTarget = nil
+            aimPart = nil
+            isAiming = false
+        end
+    end
+    
+    -- LMB Press - Start aiming
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if isActive and targetPlayer then
+            isAiming = true
+        end
+    end
+end)
+
+userInputService.InputEnded:Connect(function(input)
+    -- LMB Release - Stop aiming
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        isAiming = false
+        currentTarget = nil
+        aimPart = nil
     end
 end)
 
@@ -241,7 +288,7 @@ local function updateDropdown()
                 targetPlayer = p
                 dropdown.Text = "▼ " .. p.Name
                 listFrame.Visible = false
-                statusLabel.Text = "⚡ Aiming at: " .. p.Name
+                statusLabel.Text = "⚡ Aiming at: " .. p.Name .. (isActive and " 🟢 ACTIVE" or "")
             end)
             
             count = count + 1
@@ -260,21 +307,6 @@ dropdown.MouseButton1Click:Connect(function()
     listFrame.Visible = not listFrame.Visible
     if listFrame.Visible then
         updateDropdown()
-    end
-end)
-
--- Toggle activation
-toggleBtn.MouseButton1Click:Connect(function()
-    isActive = not isActive
-    toggleBtn.BackgroundColor3 = isActive and Color3.fromRGB(60, 200, 100) or Color3.fromRGB(220, 60, 60)
-    toggleBtn.Text = isActive and "ON" or "OFF"
-    
-    if isActive then
-        statusLabel.Text = statusLabel.Text .. " 🟢 ACTIVE"
-    else
-        statusLabel.Text = string.gsub(statusLabel.Text, " 🟢 ACTIVE", "")
-        currentTarget = nil
-        aimPart = nil
     end
 end)
 
@@ -297,7 +329,7 @@ nameBox.FocusLost:Connect(function()
         if found then
             targetPlayer = found
             dropdown.Text = "▼ " .. found.Name
-            statusLabel.Text = "⚡ Aiming at: " .. found.Name
+            statusLabel.Text = "⚡ Aiming at: " .. found.Name .. (isActive and " 🟢 ACTIVE" or "")
         else
             statusLabel.Text = "⚡ Player not found"
         end
@@ -337,6 +369,11 @@ end
 -- Aimbot function
 local function aimbot()
     if not isActive then return end
+    if not isAiming then 
+        currentTarget = nil
+        aimPart = nil
+        return 
+    end
     if not targetPlayer then 
         currentTarget = nil
         return 
@@ -395,6 +432,7 @@ targetService.PlayerRemoving:Connect(function(playerLeft)
         statusLabel.Text = "⚡ Aiming at: None"
         currentTarget = nil
         aimPart = nil
+        isAiming = false
     end
 end)
 
