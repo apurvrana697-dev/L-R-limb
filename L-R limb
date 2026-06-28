@@ -367,21 +367,21 @@ local function getClosestArm(character)
     end
 end
 
--- Function to get player's arm (which arm to use for aiming)
+-- Function to get player's arm
 local function getPlayerArm()
     local char = getCharacter()
     if not char then return nil end
     
-    -- Get the right arm by default (can change to left if needed)
+    -- Use Right Arm by default
     local arm = char:FindFirstChild("Right Arm") or char:FindFirstChild("RightArm")
     if arm then return arm end
     
-    -- Fallback to left arm
+    -- Fallback to Left Arm
     arm = char:FindFirstChild("Left Arm") or char:FindFirstChild("LeftArm")
     return arm
 end
 
--- Main arm aiming function
+-- Main arm aiming function - FIXED: Only rotates the arm, no teleporting!
 local function aimArm()
     if not isActive then return end
     if not isAiming then 
@@ -421,19 +421,24 @@ local function aimArm()
     local targetPos = targetArm.Position
     local direction = (targetPos - armPos).unit
     
-    -- Create CFrame for the arm to look at target
-    -- This rotates the arm to point at the target arm
-    local lookAt = CFrame.lookAt(armPos, targetPos)
+    -- Create CFrame looking at target from arm position
+    local lookAtCFrame = CFrame.lookAt(armPos, targetPos)
     
-    -- Apply the rotation to the arm
-    playerArm.CFrame = CFrame.new(armPos, targetPos)
+    -- Apply rotation to arm WITHOUT moving it
+    -- We keep the position the same and only change rotation
+    playerArm.CFrame = CFrame.new(armPos) * lookAtCFrame.Rotation
     
-    -- Also rotate the handle/weld if it exists for smoother aiming
+    -- Alternative approach: Use the arm's existing weld to rotate it properly
+    -- This prevents teleporting by working with the existing constraints
     local weld = playerArm:FindFirstChild("Weld") or playerArm:FindFirstChild("Motor6D")
     if weld then
-        -- Adjust the weld CFrame to maintain arm orientation
-        local originalCFrame = weld.C0 or weld.Part0.CFrame:inverse() * weld.Part1.CFrame
-        -- This is a simplified approach - you might need to adjust for your specific character
+        -- Calculate the rotation needed relative to the parent part
+        local parentPart = weld.Part0 or weld.Parent
+        if parentPart and parentPart:IsA("BasePart") then
+            local parentCFrame = parentPart.CFrame
+            local relativeCFrame = parentCFrame:inverse() * lookAtCFrame
+            weld.C0 = relativeCFrame
+        end
     end
 end
 
@@ -477,7 +482,6 @@ end)
 -- Handle character respawn
 player.CharacterAdded:Connect(function(newChar)
     character = newChar
-    -- Reset aiming state
     currentTargetArm = nil
     isAiming = false
 end)
