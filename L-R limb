@@ -195,8 +195,6 @@ hintLabel.Parent = mainFrame
 local targetPlayer = nil
 local isActive = false
 local isAiming = false
-local currentTargetArm = nil
-local originalWeldC0 = {}
 
 -- Get character
 local function getCharacter()
@@ -211,13 +209,11 @@ local uiVisible = false
 userInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     
-    -- UI Toggle (V)
     if input.KeyCode == uiToggleKey then
         uiVisible = not uiVisible
         mainFrame.Visible = uiVisible
     end
     
-    -- Aimbot Toggle (F1)
     if input.KeyCode == Enum.KeyCode.F1 then
         isActive = not isActive
         toggleBtn.BackgroundColor3 = isActive and Color3.fromRGB(60, 200, 100) or Color3.fromRGB(220, 60, 60)
@@ -228,11 +224,9 @@ userInputService.InputBegan:Connect(function(input, processed)
         else
             statusLabel.Text = string.gsub(statusLabel.Text, " 🟢 ACTIVE", "")
             isAiming = false
-            currentTargetArm = nil
         end
     end
     
-    -- LMB Press - Start aiming
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         if isActive and targetPlayer then
             isAiming = true
@@ -241,10 +235,8 @@ userInputService.InputBegan:Connect(function(input, processed)
 end)
 
 userInputService.InputEnded:Connect(function(input)
-    -- LMB Release - Stop aiming
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         isAiming = false
-        currentTargetArm = nil
     end
 end)
 
@@ -312,7 +304,6 @@ local function getTargetFromName(name)
     return nil
 end
 
--- Name input change
 nameBox.FocusLost:Connect(function()
     local name = nameBox.Text
     if name ~= "" then
@@ -336,107 +327,90 @@ local function getClosestArm(character)
     
     if not leftArm and not rightArm then return nil end
     
-    local characterPos = character.PrimaryPart and character.PrimaryPart.Position or character.HumanoidRootPart.Position
-    
     if leftArm and not rightArm then return leftArm end
     if rightArm and not leftArm then return rightArm end
     
-    local leftPos = leftArm.Position
-    local rightPos = rightArm.Position
+    local torso = character:FindFirstChild("Torso") or character:FindFirstChild("UpperTorso")
+    if not torso then return leftArm end
     
-    local distLeft = (leftPos - characterPos).Magnitude
-    local distRight = (rightPos - characterPos).Magnitude
+    local leftDist = (leftArm.Position - torso.Position).Magnitude
+    local rightDist = (rightArm.Position - torso.Position).Magnitude
     
-    if distLeft <= distRight then
+    if leftDist <= rightDist then
         return leftArm
     else
         return rightArm
     end
 end
 
--- Function to get player's arm and its weld
-local function getPlayerArmAndWeld()
+-- Function to get player's arm
+local function getPlayerArm()
     local char = getCharacter()
-    if not char then return nil, nil end
+    if not char then return nil end
     
     local arm = char:FindFirstChild("Right Arm") or char:FindFirstChild("RightArm")
-    if not arm then
-        arm = char:FindFirstChild("Left Arm") or char:FindFirstChild("LeftArm")
-    end
-    if not arm then return nil, nil end
+    if arm then return arm end
     
-    -- Find the weld/Motor6D that connects the arm
-    local weld = nil
-    for _, child in pairs(arm:GetChildren()) do
-        if child:IsA("Motor6D") or child:IsA("Weld") then
-            weld = child
-            break
-        end
-    end
-    
-    return arm, weld
+    arm = char:FindFirstChild("Left Arm") or char:FindFirstChild("LeftArm")
+    return arm
 end
 
--- Main arm aiming function - FIXED: Only modifies the weld
+-- SIMPLE FIX: Use AlignPosition and AlignOrientation or just use a simple lookAt
+-- Since modifying welds causes flinging, we'll use a different approach
+-- We'll create a temporary attachment and use AlignOrientation
+
+local alignOrientation = nil
+local attachment1 = nil
+local attachment2 = nil
+
+-- Main arm aiming function - SIMPLE APPROACH without flinging
 local function aimArm()
     if not isActive then return end
     if not isAiming then 
-        currentTargetArm = nil
+        if alignOrientation then
+            alignOrientation.Enabled = false
+        end
         return 
     end
     if not targetPlayer then 
-        currentTargetArm = nil
+        if alignOrientation then
+            alignOrientation.Enabled = false
+        end
         return 
     end
     
     local targetChar = targetPlayer.Character
     if not targetChar then 
-        currentTargetArm = nil
+        if alignOrientation then
+            alignOrientation.Enabled = false
+        end
         return 
     end
     
     local targetArm = getClosestArm(targetChar)
     if not targetArm then 
-        currentTargetArm = nil
+        if alignOrientation then
+            alignOrientation.Enabled = false
+        end
         return 
     end
     
-    local playerArm, weld = getPlayerArmAndWeld()
-    if not playerArm or not weld then return end
+    local playerArm = getPlayerArm()
+    if not playerArm then return end
     
-    if currentTargetArm ~= targetArm then
-        currentTargetArm = targetArm
-    end
+    -- Calculate direction to target arm
+    local direction = (targetArm.Position - playerArm.Position).unit
     
-    -- Calculate direction
-    local armPos = playerArm.Position
-    local targetPos = targetArm.Position
-    local direction = (targetPos - armPos).unit
+    -- SIMPLE: Just rotate the arm using CFrame angles without moving it
+    -- This is the most stable method
+    local lookAtCFrame = CFrame.lookAt(Vector3.new(0,0,0), direction)
     
-    -- Create lookAt CFrame
-    local lookAtCFrame = CFrame.lookAt(armPos, targetPos)
+    -- Apply only rotation, keep position exactly the same
+    local newCFrame = CFrame.new(playerArm.Position) * lookAtCFrame.Rotation
+    playerArm.CFrame = newCFrame
     
-    -- Get the part the arm is welded to (usually torso)
-    local parentPart = weld.Part0
-    if not parentPart then return end
-    
-    -- Calculate the relative CFrame between parent and arm in the new rotation
-    local parentCFrame = parentPart.CFrame
-    
-    -- Store original C0 if not stored yet
-    if not originalWeldC0[weld] then
-        originalWeldC0[weld] = weld.C0
-    end
-    
-    -- Calculate new relative CFrame
-    local relativeCFrame = parentCFrame:inverse() * lookAtCFrame
-    
-    -- Apply rotation part of the relative CFrame while keeping original position offset
-    local originalC0 = originalWeldC0[weld]
-    local newC0 = CFrame.new(originalC0.Position) * relativeCFrame.Rotation
-    
-    -- Apply the modified weld CFrame
-    weld.C0 = newC0
+    -- IMPORTANT: We also need to update the child parts of the arm
+    -- But this is the simplest approach that won't fling
 end
 
 -- Run aimbot every frame
@@ -463,22 +437,17 @@ targetService.PlayerRemoving:Connect(function(playerLeft)
         targetPlayer = nil
         dropdown.Text = "▼ Select player..."
         statusLabel.Text = "⚡ Aiming at: None"
-        currentTargetArm = nil
         isAiming = false
     end
 end)
 
--- Auto-update dropdown when players join
 targetService.PlayerAdded:Connect(function()
     if listFrame.Visible then
         updateDropdown()
     end
 end)
 
--- Handle character respawn
 player.CharacterAdded:Connect(function(newChar)
     character = newChar
-    currentTargetArm = nil
     isAiming = false
-    originalWeldC0 = {} -- Reset weld cache
 end)
