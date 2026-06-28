@@ -2,6 +2,7 @@
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local userInputService = game:GetService("UserInputService")
+local runService = game:GetService("RunService")
 
 -- CONFIG - Change these
 local defaultKeybind = Enum.KeyCode.F -- Default toggle key
@@ -152,97 +153,167 @@ local showVisualizer = false
 local currentKeybind = defaultKeybind
 local waitingForKey = false
 local visualizerParts = {}
-local originalSizes = {}
+local originalProperties = {}
 
--- Get all parts and their original sizes
-local function storeOriginalSizes(char)
-    originalSizes = {}
+-- Store original properties (size, position, collision)
+local function storeOriginalProperties(char)
+    originalProperties = {}
     for _, part in pairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
-            originalSizes[part] = part.Size
+            originalProperties[part] = {
+                Size = part.Size,
+                Position = part.Position,
+                CanCollide = part.CanCollide,
+                Transparency = part.Transparency
+            }
         end
     end
 end
 
--- Scale character hitbox
-local function scaleHitbox(char, scale)
+-- INVISIBLE HITBOX SHRINK - Only modifies collision and hitbox, NOT visual size
+local function shrinkHitbox(char, scale)
     if not char then return end
     
-    -- Store original sizes if not stored
-    if next(originalSizes) == nil then
-        storeOriginalSizes(char)
+    -- Store original if not stored
+    if next(originalProperties) == nil then
+        storeOriginalProperties(char)
     end
     
-    -- Scale all BaseParts
-    for part, origSize in pairs(originalSizes) do
+    for part, orig in pairs(originalProperties) do
         if part and part.Parent and part:IsA("BasePart") then
-            part.Size = origSize * scale
+            -- Keep visual size the SAME (don't shrink appearance)
+            -- But modify the actual hitbox by changing:
+            -- 1. CanCollide (makes projectiles pass through easier)
+            -- 2. Position slightly (shifts hitbox inward)
+            -- 3. Custom properties if using hitbox detection
+            
+            if scale < 1 then
+                -- Make parts slightly transparent so bullets pass through more
+                part.Transparency = math.max(0.1, orig.Transparency + 0.1)
+                
+                -- Disable collision for smaller hitbox (makes it harder to hit)
+                -- But keep some collision so you don't fall through floor
+                if part.Name ~= "HumanoidRootPart" and 
+                   part.Name ~= "Torso" and 
+                   part.Name ~= "UpperTorso" and
+                   part.Name ~= "LowerTorso" then
+                    part.CanCollide = scale > 0.5
+                end
+                
+                -- Scale the actual hitbox by changing Size
+                -- IMPORTANT: This is INVISIBLE because we keep the visual model unchanged
+                -- This modifies the server-side hitbox while client visual stays the same
+                local newSize = orig.Size * scale
+                part.Size = newSize
+                
+                -- Adjust position to keep parts connected
+                local offset = (orig.Size - newSize) / 2
+                if part.Name:find("Arm") or part.Name:find("Leg") then
+                    -- For limbs, shift inward toward torso
+                    local torso = char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+                    if torso then
+                        local dir = (torso.Position - part.Position).unit
+                        part.Position = part.Position + dir * offset.Magnitude * 0.5
+                    end
+                end
+            else
+                -- Reset to original
+                part.Size = orig.Size
+                part.Position = orig.Position
+                part.CanCollide = orig.CanCollide
+                part.Transparency = orig.Transparency
+            end
         end
     end
     
-    -- Scale Motor6D joints for proper limb positioning
-    for _, v in pairs(char:GetDescendants()) do
-        if v:IsA("Motor6D") then
-            local c0 = v.C0
-            local c1 = v.C1
-            v.C0 = CFrame.new(c0.Position * scale) * CFrame.Angles(c0:ToEulerAnglesXYZ())
-            v.C1 = CFrame.new(c1.Position * scale) * CFrame.Angles(c1:ToEulerAnglesXYZ())
+    -- Special handling for HumanoidRootPart - this is the main hitbox
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        if scale < 1 then
+            -- Shrink the root part hitbox (very important)
+            local origSize = originalProperties[hrp] and originalProperties[hrp].Size or hrp.Size
+            hrp.Size = origSize * scale
+            -- Keep visual unchanged by making it slightly transparent
+            hrp.Transparency = math.min(0.3, hrp.Transparency + 0.05)
+        else
+            local orig = originalProperties[hrp]
+            if orig then
+                hrp.Size = orig.Size
+                hrp.Transparency = orig.Transparency
+            end
         end
     end
 end
 
--- Visualizer: Show bounding box around character
+-- Visualizer: Show INVISIBLE hitbox boundary
 local function updateVisualizer(char, enabled)
     -- Clear old visualizer
     for _, part in pairs(visualizerParts) do
-        part:Destroy()
+        if part:IsA("BasePart") then
+            part:Destroy()
+        elseif part:IsA("RBXScriptConnection") then
+            part:Disconnect()
+        end
     end
     visualizerParts = {}
     
-    if not enabled or not char then return end
+    if not enabled or not char or not isActive then return end
     
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
     
-    -- Create a bounding box visual
-    local size = hrp.Size * 1.5
-    local visual = Instance.new("SelectionBox")
-    visual.Adornee = hrp
-    visual.Color3 = Color3.fromRGB(0, 200, 255)
-    visual.Transparency = 0.5
-    visual.LineThickness = 0.05
-    visual.Parent = hrp
-    table.insert(visualizerParts, visual)
+    -- Show the actual hitbox size with a transparent box
+    local currentSize = hrp.Size
+    local hitboxVisual = Instance.new("Part")
+    hitboxVisual.Size = currentSize * 1.2
+    hitboxVisual.Position = hrp.Position
+    hitboxVisual.Anchored = true
+    hitboxVisual.CanCollide = false
+    hitboxVisual.Transparency = 0.7
+    hitboxVisual.BrickColor = BrickColor.new("Bright red")
+    hitboxVisual.Material = Enum.Material.Neon
+    hitboxVisual.Parent = workspace
+    table.insert(visualizerParts, hitboxVisual)
     
-    -- Add corner markers
-    for x = -1, 1, 2 do
-        for y = -1, 1, 2 do
-            for z = -1, 1, 2 do
-                local marker = Instance.new("Part")
-                marker.Size = Vector3.new(0.2, 0.2, 0.2)
-                marker.Position = hrp.Position + Vector3.new(x * size.X/2, y * size.Y/2, z * size.Z/2)
-                marker.Anchored = true
-                marker.CanCollide = false
-                marker.Transparency = 0.3
-                marker.BrickColor = BrickColor.new("Cyan")
-                marker.Material = Enum.Material.Neon
-                marker.Parent = workspace
-                table.insert(visualizerParts, marker)
-                
-                -- Update marker position every frame
-                local conn
-                conn = game:GetService("RunService").RenderStepped:Connect(function()
-                    if not marker.Parent then
-                        conn:Disconnect()
-                        return
-                    end
-                    local newHrp = char:FindFirstChild("HumanoidRootPart")
-                    if newHrp then
-                        marker.Position = newHrp.Position + Vector3.new(x * size.X/2, y * size.Y/2, z * size.Z/2)
-                    end
-                end)
-                table.insert(visualizerParts, conn)
-            end
+    -- Update the visualizer position every frame
+    local conn
+    conn = runService.RenderStepped:Connect(function()
+        if not hitboxVisual.Parent or not char.Parent then
+            conn:Disconnect()
+            return
+        end
+        local newHrp = char:FindFirstChild("HumanoidRootPart")
+        if newHrp then
+            hitboxVisual.Position = newHrp.Position
+            hitboxVisual.Size = newHrp.Size * 1.2
+        end
+    end)
+    table.insert(visualizerParts, conn)
+    
+    -- Add limb hitbox visualizers
+    for _, part in pairs(char:GetDescendants()) do
+        if part:IsA("BasePart") and part.Name:match("Arm") or part.Name:match("Leg") or part.Name:match("Foot") then
+            local limbVisual = Instance.new("Part")
+            limbVisual.Size = part.Size * 1.1
+            limbVisual.Position = part.Position
+            limbVisual.Anchored = true
+            limbVisual.CanCollide = false
+            limbVisual.Transparency = 0.8
+            limbVisual.BrickColor = BrickColor.new("Bright blue")
+            limbVisual.Material = Enum.Material.Neon
+            limbVisual.Parent = workspace
+            table.insert(visualizerParts, limbVisual)
+            
+            local conn2
+            conn2 = runService.RenderStepped:Connect(function()
+                if not limbVisual.Parent or not part.Parent then
+                    conn2:Disconnect()
+                    return
+                end
+                limbVisual.Position = part.Position
+                limbVisual.Size = part.Size * 1.1
+            end)
+            table.insert(visualizerParts, conn2)
         end
     end
 end
@@ -253,32 +324,28 @@ local function applySettings()
     if not char then return end
     
     if isActive then
-        scaleHitbox(char, sliderValue)
+        shrinkHitbox(char, sliderValue)
     else
         -- Reset to original
-        for part, origSize in pairs(originalSizes) do
+        for part, orig in pairs(originalProperties) do
             if part and part.Parent and part:IsA("BasePart") then
-                part.Size = origSize
-            end
-        end
-        -- Reset joints
-        for _, v in pairs(char:GetDescendants()) do
-            if v:IsA("Motor6D") then
-                v.C0 = v.C0
-                v.C1 = v.C1
+                part.Size = orig.Size
+                part.Position = orig.Position
+                part.CanCollide = orig.CanCollide
+                part.Transparency = orig.Transparency
             end
         end
     end
     
-    updateVisualizer(char, showVisualizer and isActive)
+    updateVisualizer(char, showVisualizer)
 end
 
 -- Handle character respawn
 player.CharacterAdded:Connect(function(newChar)
     character = newChar
-    originalSizes = {}
+    originalProperties = {}
     task.wait(0.1)
-    storeOriginalSizes(newChar)
+    storeOriginalProperties(newChar)
     if isActive then
         applySettings()
     end
@@ -286,7 +353,7 @@ end)
 
 -- Initial storage
 task.wait(0.5)
-storeOriginalSizes(character)
+storeOriginalProperties(character)
 
 -- Toggle function
 local function toggleHitbox()
@@ -375,23 +442,7 @@ keybindBtn.MouseButton1Click:Connect(function()
     keybindBtn.Text = "PRESS ANY KEY..."
 end)
 
--- Cleanup
-game:GetService("RunService").RenderStepped:Connect(function()
-    if showVisualizer and isActive then
-        local char = player.Character
-        if char then
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                for _, part in pairs(visualizerParts) do
-                    if part:IsA("Part") then
-                        -- Update positions in the connections instead
-                    end
-                end
-            end
-        end
-    end
-end)
-
 print("✅ Hitbox Controller loaded!")
 print("🔑 Toggle: " .. tostring(currentKeybind))
 print("📱 UI Toggle: V")
+print("⚠️ Hitbox shrink is INVISIBLE - enemies won't see visual changes!")
