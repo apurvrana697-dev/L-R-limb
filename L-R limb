@@ -1,0 +1,191 @@
+-- LocalScript inside StarterGui or a ScreenGui
+
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+local targetService = game:GetService("Players")
+
+-- Create UI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = player.PlayerGui
+
+-- Main Frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 300, 0, 200)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = false
+mainFrame.Parent = screenGui
+
+-- UI Corner
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = mainFrame
+
+-- Toggle Button
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 120, 0, 40)
+toggleBtn.Position = UDim2.new(0.5, -160, 0, 20)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(70, 200, 70)
+toggleBtn.Text = "ON"
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.TextScaled = true
+toggleBtn.Parent = mainFrame
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 8)
+toggleCorner.Parent = toggleBtn
+
+-- Target Name Input
+local nameBox = Instance.new("TextBox")
+nameBox.Size = UDim2.new(0, 200, 0, 30)
+nameBox.Position = UDim2.new(0.5, -100, 0, 80)
+nameBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+nameBox.Text = "Enter target name"
+nameBox.TextColor3 = Color3.new(1, 1, 1)
+nameBox.TextScaled = true
+nameBox.Parent = mainFrame
+local nameCorner = Instance.new("UICorner")
+nameCorner.CornerRadius = UDim.new(0, 6)
+nameCorner.Parent = nameBox
+
+-- Target Selector (Dropdown)
+local dropdown = Instance.new("TextButton")
+dropdown.Size = UDim2.new(0, 200, 0, 30)
+dropdown.Position = UDim2.new(0.5, -100, 0, 130)
+dropdown.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+dropdown.Text = "Select target from server"
+dropdown.TextColor3 = Color3.new(1, 1, 1)
+dropdown.TextScaled = true
+dropdown.Parent = mainFrame
+local dropdownCorner = Instance.new("UICorner")
+dropdownCorner.CornerRadius = UDim.new(0, 6)
+dropdownCorner.Parent = dropdown
+
+-- Dropdown List (hidden initially)
+local listFrame = Instance.new("ScrollingFrame")
+listFrame.Size = UDim2.new(0, 200, 0, 100)
+listFrame.Position = UDim2.new(0.5, -100, 0, 165)
+listFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+listFrame.Visible = false
+listFrame.Parent = mainFrame
+local listCorner = Instance.new("UICorner")
+listCorner.CornerRadius = UDim.new(0, 6)
+listCorner.Parent = listFrame
+
+-- Toggle UI visibility key (e.g., "V")
+local uiToggleKey = Enum.KeyCode.V
+local uiVisible = false
+
+game:GetService("UserInputService").InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == uiToggleKey then
+        uiVisible = not uiVisible
+        mainFrame.Visible = uiVisible
+    end
+end)
+
+-- Variables
+local targetPlayer = nil
+local isActive = false
+
+-- Function to get target from name
+local function getTargetFromName(name)
+    for _, p in pairs(targetService:GetPlayers()) do
+        if p.Name:lower():find(name:lower()) then
+            return p
+        end
+    end
+    return nil
+end
+
+-- Function to update dropdown list
+local function updateDropdown()
+    for _, child in pairs(listFrame:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+    
+    local players = targetService:GetPlayers()
+    for _, p in pairs(players) do
+        if p ~= player then
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, 0, 0, 30)
+            btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            btn.Text = p.Name
+            btn.TextColor3 = Color3.new(1, 1, 1)
+            btn.TextScaled = true
+            btn.Parent = listFrame
+            
+            local btnCorner = Instance.new("UICorner")
+            btnCorner.CornerRadius = UDim.new(0, 4)
+            btnCorner.Parent = btn
+            
+            btn.MouseButton1Click:Connect(function()
+                targetPlayer = p
+                dropdown.Text = "Target: " .. p.Name
+                listFrame.Visible = false
+            end)
+        end
+    end
+    listFrame.CanvasSize = UDim2.new(0, 0, 0, #listFrame:GetChildren() * 32)
+end
+
+-- Dropdown toggle
+dropdown.MouseButton1Click:Connect(function()
+    listFrame.Visible = not listFrame.Visible
+    updateDropdown()
+end)
+
+-- Toggle activation
+toggleBtn.MouseButton1Click:Connect(function()
+    isActive = not isActive
+    toggleBtn.BackgroundColor3 = isActive and Color3.fromRGB(70, 200, 70) or Color3.fromRGB(200, 70, 70)
+    toggleBtn.Text = isActive and "ON" or "OFF"
+end)
+
+-- M1 click detection
+mouse.Button1Down:Connect(function()
+    if not isActive then return end
+    
+    -- If name input has a value, try to use it
+    local name = nameBox.Text
+    if name ~= "Enter target name" and name ~= "" then
+        targetPlayer = getTargetFromName(name)
+        if targetPlayer then
+            dropdown.Text = "Target: " .. targetPlayer.Name
+        end
+    end
+    
+    if not targetPlayer then return end
+    
+    local character = targetPlayer.Character
+    if not character then return end
+    
+    -- Get left and right arms only
+    local leftArm = character:FindFirstChild("Left Arm") or character:FindFirstChild("LeftArm")
+    local rightArm = character:FindFirstChild("Right Arm") or character:FindFirstChild("RightArm")
+    
+    -- Target only these limbs
+    if leftArm then
+        -- Example: Highlight or manipulate left arm
+        leftArm.BrickColor = BrickColor.new("Bright red")
+        wait(0.1)
+        leftArm.BrickColor = BrickColor.new("White")
+    end
+    
+    if rightArm then
+        rightArm.BrickColor = BrickColor.new("Bright red")
+        wait(0.1)
+        rightArm.BrickColor = BrickColor.new("White")
+    end
+end)
+
+-- Cleanup for disconnected players
+targetService.PlayerRemoving:Connect(function()
+    if targetPlayer and not targetService:FindFirstChild(targetPlayer.Name) then
+        targetPlayer = nil
+        dropdown.Text = "Select target from server"
+    end
+end)
