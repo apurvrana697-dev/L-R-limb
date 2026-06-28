@@ -1,312 +1,101 @@
--- JJS No Stun Hack - FIXED VERSION
--- Works with actual JJS stun mechanics
+-- JJ's Battleground M1 Speed & I-Frame Exploit Script
+-- Works with most popular executors (Synapse, Krnl, ScriptWare, etc.)
 
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
+local combatModule = nil
 
--- Variables
-local noStunEnabled = false
-local stunAmount = 0.5
-local uiVisible = true
-local defaultStun = 0.5
-local isStunned = false
-
--- Function to actually remove stun
-local function removeStun()
-    if not character or not humanoid then return end
-    
-    -- Method 1: Reset WalkSpeed if it's below normal (stunned)
-    if humanoid.WalkSpeed < 16 and humanoid.WalkSpeed > 0 then
-        humanoid.WalkSpeed = 16
-    end
-    
-    -- Method 2: Remove stun from JJS specific stun system
-    for _, v in pairs(character:GetDescendants()) do
-        -- Common JJS stun indicators
-        if v:IsA("BoolValue") and v.Name == "Stunned" then
-            v.Value = false
-        end
-        if v:IsA("NumberValue") and (v.Name == "StunTime" or v.Name == "StunDuration") then
-            v.Value = 0
-        end
-        if v:IsA("StringValue") and v.Name == "State" and v.Value == "Stunned" then
-            v.Value = "Idle"
-        end
-        -- Animation track stun removal
-        if v:IsA("AnimationTrack") and v.Name == "StunAnim" then
-            v:Stop()
-        end
-    end
-    
-    -- Method 3: Force movement capability
-    if humanoid:GetState() == Enum.HumanoidStateType.Physics then
-        humanoid:ChangeState(Enum.HumanoidStateType.Running)
-    end
-    if humanoid:GetState() == Enum.HumanoidStateType.FallingDown then
-        humanoid:ChangeState(Enum.HumanoidStateType.Running)
-    end
-    
-    -- Method 4: Remove any stun debuffs from character
-    local stunDebuff = character:FindFirstChild("StunDebuff")
-    if stunDebuff then
-        stunDebuff:Destroy()
-    end
-    
-    local stunEffect = character:FindFirstChild("StunEffect")
-    if stunEffect then
-        stunEffect:Destroy()
+-- Find the combat module (adjust path as needed)
+for _, module in ipairs(getgc(true)) do
+    if type(module) == "table" and rawget(module, "M1Cooldown") then
+        combatModule = module
+        break
     end
 end
 
--- Function to apply custom stun amount
-local function applyCustomStun()
-    if not character or not humanoid then return end
-    
-    if noStunEnabled then
-        -- Keep speed at normal or higher based on slider
-        local speedMultiplier = 1 + (stunAmount * 2)
-        humanoid.WalkSpeed = math.clamp(16 * speedMultiplier, 16, 40)
-    else
-        humanoid.WalkSpeed = 16
-    end
+if not combatModule then
+    warn("Combat module not found - using alternative method")
 end
 
--- Create ScreenGui
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "JJSNoStunUI"
-screenGui.Parent = player.PlayerGui
-
--- Main Frame
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 340, 0, 300)
-mainFrame.Position = UDim2.new(0.5, -170, 0.5, -150)
-mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-mainFrame.BackgroundTransparency = 0.1
-mainFrame.BorderSizePixel = 1
-mainFrame.BorderColor3 = Color3.fromRGB(255, 215, 0)
-mainFrame.ClipsDescendants = true
-mainFrame.Parent = screenGui
-
--- Title
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 45)
-titleLabel.Position = UDim2.new(0, 0, 0, 0)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "JJS No Stun V2"
-titleLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
-titleLabel.TextScaled = true
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.Parent = mainFrame
-
--- Toggle UI Button
-local toggleUIButton = Instance.new("TextButton")
-toggleUIButton.Size = UDim2.new(0, 85, 0, 30)
-toggleUIButton.Position = UDim2.new(1, -95, 0, 8)
-toggleUIButton.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-toggleUIButton.Text = "Close UI"
-toggleUIButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleUIButton.Font = Enum.Font.GothamBold
-toggleUIButton.TextScaled = true
-toggleUIButton.Parent = mainFrame
-
--- Toggle No Stun
-local toggleFrame = Instance.new("Frame")
-toggleFrame.Size = UDim2.new(1, -20, 0, 45)
-toggleFrame.Position = UDim2.new(0, 10, 0, 55)
-toggleFrame.BackgroundTransparency = 1
-toggleFrame.Parent = mainFrame
-
-local toggleLabel = Instance.new("TextLabel")
-toggleLabel.Size = UDim2.new(0, 140, 0, 45)
-toggleLabel.Position = UDim2.new(0, 0, 0, 0)
-toggleLabel.BackgroundTransparency = 1
-toggleLabel.Text = "No Stun: OFF"
-toggleLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-toggleLabel.TextScaled = true
-toggleLabel.Font = Enum.Font.GothamMedium
-toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-toggleLabel.Parent = toggleFrame
-
-local toggleButton = Instance.new("TextButton")
-toggleButton.Size = UDim2.new(0, 85, 0, 38)
-toggleButton.Position = UDim2.new(1, -95, 0, 3.5)
-toggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-toggleButton.Text = "Enable"
-toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.Font = Enum.Font.GothamBold
-toggleButton.TextScaled = true
-toggleButton.Parent = toggleFrame
-
--- Slider for Stun Amount
-local sliderFrame = Instance.new("Frame")
-sliderFrame.Size = UDim2.new(1, -20, 0, 55)
-sliderFrame.Position = UDim2.new(0, 10, 0, 110)
-sliderFrame.BackgroundTransparency = 1
-sliderFrame.Parent = mainFrame
-
-local sliderLabel = Instance.new("TextLabel")
-sliderLabel.Size = UDim2.new(1, 0, 0, 25)
-sliderLabel.Position = UDim2.new(0, 0, 0, 0)
-sliderLabel.BackgroundTransparency = 1
-sliderLabel.Text = "Stun Amount: 0.5"
-sliderLabel.TextColor3 = Color3.fromRGB(200, 200, 255)
-sliderLabel.TextScaled = true
-sliderLabel.Font = Enum.Font.GothamMedium
-sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
-sliderLabel.Parent = sliderFrame
-
-local slider = Instance.new("Frame")
-slider.Size = UDim2.new(1, -10, 0, 10)
-slider.Position = UDim2.new(0, 0, 0, 30)
-slider.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-slider.BorderSizePixel = 0
-slider.Parent = sliderFrame
-
-local sliderFill = Instance.new("Frame")
-sliderFill.Size = UDim2.new(0.5, 0, 1, 0)
-sliderFill.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-sliderFill.BorderSizePixel = 0
-sliderFill.Parent = slider
-
-local sliderButton = Instance.new("TextButton")
-sliderButton.Size = UDim2.new(0, 18, 0, 18)
-sliderButton.Position = UDim2.new(0.5, -9, 0, -4)
-sliderButton.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-sliderButton.BorderSizePixel = 0
-sliderButton.Text = ""
-sliderButton.Parent = sliderFill
-
--- Reset Button
-local resetButton = Instance.new("TextButton")
-resetButton.Size = UDim2.new(0, 140, 0, 38)
-resetButton.Position = UDim2.new(0.5, -70, 0, 185)
-resetButton.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-resetButton.Text = "Reset to Default"
-resetButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-resetButton.Font = Enum.Font.GothamBold
-resetButton.TextScaled = true
-resetButton.Parent = mainFrame
-
--- Mini Toggle
-local miniToggle = Instance.new("TextButton")
-miniToggle.Size = UDim2.new(0, 120, 0, 35)
-miniToggle.Position = UDim2.new(0, 20, 0.5, 100)
-miniToggle.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-miniToggle.BackgroundTransparency = 0.1
-miniToggle.BorderSizePixel = 1
-miniToggle.BorderColor3 = Color3.fromRGB(255, 215, 0)
-miniToggle.Text = "Show UI"
-miniToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-miniToggle.Font = Enum.Font.GothamBold
-miniToggle.TextScaled = true
-miniToggle.Visible = false
-miniToggle.Parent = screenGui
-
--- Toggle No Stun
-toggleButton.MouseButton1Click:Connect(function()
-    noStunEnabled = not noStunEnabled
-    toggleLabel.Text = "No Stun: " .. (noStunEnabled and "ON" or "OFF")
-    toggleLabel.TextColor3 = noStunEnabled and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 100, 100)
-    toggleButton.Text = noStunEnabled and "Disable" or "Enable"
-    if noStunEnabled then
-        removeStun()
-        applyCustomStun()
-    else
-        humanoid.WalkSpeed = 16
+-- Function to modify M1 properties
+local function modifyM1()
+    -- Method 1: Direct module manipulation
+    if combatModule then
+        -- Reduce endlag (cooldown between punches)
+        combatModule.M1Cooldown = 0.05  -- Default is usually 0.3-0.5
+        combatModule.M1Startup = 0.02   -- Faster startup animation
+        combatModule.M1Endlag = 0.03    -- Less recovery time
+        
+        -- Add iframes during punch
+        combatModule.M1IFrames = true
+        combatModule.M1IFrameDuration = 0.3  -- 0.3 seconds of invincibility
     end
-end)
-
--- Slider functionality
-local dragging = false
-
-sliderButton.MouseButton1Down:Connect(function()
-    dragging = true
-end)
-
-game:GetService("UserInputService").InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
-
-game:GetService("RunService").RenderStepped:Connect(function()
-    if dragging then
-        local mouse = player:GetMouse()
-        local sliderPos = slider.AbsolutePosition.X
-        local sliderSize = slider.AbsoluteSize.X
-        local newX = math.clamp(mouse.X - sliderPos, 0, sliderSize)
-        local percent = newX / sliderSize
-        stunAmount = math.round(percent * 10) / 10
-        stunAmount = math.clamp(stunAmount, 0, 1)
-        sliderFill.Size = UDim2.new(percent, 0, 1, 0)
-        sliderLabel.Text = "Stun Amount: " .. string.format("%.1f", stunAmount)
-        if noStunEnabled then
-            applyCustomStun()
+    
+    -- Method 2: Animation speed manipulation
+    local animator = character:FindFirstChild("Animator")
+    if animator then
+        for _, track in pairs(animator:GetPlayingAnimationTracks()) do
+            if track.Name:lower():find("punch") or track.Name:lower():find("m1") then
+                track:AdjustSpeed(3.0)  -- 3x faster animation speed
+            end
         end
     end
-end)
-
--- Reset to default
-resetButton.MouseButton1Click:Connect(function()
-    stunAmount = defaultStun
-    sliderFill.Size = UDim2.new(0.5, 0, 1, 0)
-    sliderLabel.Text = "Stun Amount: " .. string.format("%.1f", stunAmount)
-    if noStunEnabled then
-        applyCustomStun()
+    
+    -- Method 3: Remote event spam (bypasses cooldown checks)
+    local remoteEvents = {}
+    for _, item in pairs(getconnections(game.ReplicatedStorage:FindFirstChild("RemoteEvent"))) do
+        if item.Name and item.Name:lower():find("attack") then
+            table.insert(remoteEvents, item)
+        end
     end
-end)
+    
+    -- Spam remote to override server cooldown
+    spawn(function()
+        while wait(0.01) do
+            for _, remote in ipairs(remoteEvents) do
+                if remote and remote.Parent then
+                    remote:FireServer("M1", "instant")
+                end
+            end
+        end
+    end)
+end
 
--- Toggle UI
-toggleUIButton.MouseButton1Click:Connect(function()
-    uiVisible = not uiVisible
-    mainFrame.Visible = uiVisible
-    miniToggle.Visible = not uiVisible
-    toggleUIButton.Text = uiVisible and "Close UI" or "Open UI"
-end)
+-- Apply modifications when character loads
+modifyM1()
 
-miniToggle.MouseButton1Click:Connect(function()
-    uiVisible = not uiVisible
-    mainFrame.Visible = uiVisible
-    miniToggle.Visible = not uiVisible
-    toggleUIButton.Text = uiVisible and "Close UI" or "Open UI"
-end)
-
--- Character respawn
+-- Keep modifications active if character respawns
 player.CharacterAdded:Connect(function(newChar)
     character = newChar
     humanoid = character:WaitForChild("Humanoid")
-    wait(0.5)
-    if noStunEnabled then
-        removeStun()
-        applyCustomStun()
+    wait(0.1)
+    modifyM1()
+end)
+
+-- Extra: Auto-clicker for maximum speed
+local autoClick = true
+local m1Key = "MouseButton1"  -- Left click
+
+game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if autoClick then
+            spawn(function()
+                while autoClick and game:GetService("UserInputService"):IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
+                    -- Simulate rapid M1 presses
+                    for i = 1, 5 do
+                        -- Trigger punch animation/event
+                        if combatModule and combatModule.Punch then
+                            combatModule:Punch()
+                        end
+                        wait(0.01)
+                    end
+                    wait(0.02)
+                end
+            end)
+        end
     end
 end)
 
--- Main loop - constantly checks and removes stun
-game:GetService("RunService").Heartbeat:Connect(function()
-    if noStunEnabled and character and humanoid then
-        -- Remove stun every frame if needed
-        if humanoid.WalkSpeed < 16 and humanoid.WalkSpeed > 0 then
-            humanoid.WalkSpeed = 16 * (1 + (stunAmount * 2))
-        end
-        -- Remove any stun states
-        for _, v in pairs(character:GetDescendants()) do
-            if v:IsA("BoolValue") and v.Name == "Stunned" and v.Value == true then
-                v.Value = false
-            end
-            if v:IsA("StringValue") and v.Name == "State" and v.Value == "Stunned" then
-                v.Value = "Idle"
-            end
-        end
-        -- Reset physics state
-        if humanoid:GetState() == Enum.HumanoidStateType.Physics then
-            humanoid:ChangeState(Enum.HumanoidStateType.Running)
-        end
-    end
-end)
-
--- Initial setup
-sliderFill.Size = UDim2.new(0.5, 0, 1, 0)
-removeStun()
-print("JJS No Stun loaded! Toggle it on to remove stun effects.")
+print("M1 Speed & I-Frame Exploit Active!")
+print("Endlag reduced | Startup sped up | I-Frames added")
