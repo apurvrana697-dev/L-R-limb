@@ -195,6 +195,7 @@ hintLabel.Parent = mainFrame
 local targetPlayer = nil
 local isActive = false
 local isAiming = false
+local bodyGyro = nil
 
 -- Get character
 local function getCharacter()
@@ -224,6 +225,9 @@ userInputService.InputBegan:Connect(function(input, processed)
         else
             statusLabel.Text = string.gsub(statusLabel.Text, " 🟢 ACTIVE", "")
             isAiming = false
+            if bodyGyro then
+                bodyGyro.Enabled = false
+            end
         end
     end
     
@@ -237,6 +241,9 @@ end)
 userInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         isAiming = false
+        if bodyGyro then
+            bodyGyro.Enabled = false
+        end
     end
 end)
 
@@ -355,42 +362,50 @@ local function getPlayerArm()
     return arm
 end
 
--- SIMPLE FIX: Use AlignPosition and AlignOrientation or just use a simple lookAt
--- Since modifying welds causes flinging, we'll use a different approach
--- We'll create a temporary attachment and use AlignOrientation
+-- Create BodyGyro for the arm
+local function setupBodyGyro(arm)
+    if bodyGyro then
+        bodyGyro:Destroy()
+        bodyGyro = nil
+    end
+    
+    bodyGyro = Instance.new("BodyGyro")
+    bodyGyro.Parent = arm
+    bodyGyro.D = 500
+    bodyGyro.P = 10000
+    bodyGyro.MaxTorque = Vector3.new(4000, 4000, 4000)
+    bodyGyro.Enabled = false
+    return bodyGyro
+end
 
-local alignOrientation = nil
-local attachment1 = nil
-local attachment2 = nil
-
--- Main arm aiming function - SIMPLE APPROACH without flinging
+-- Main arm aiming function using BodyGyro
 local function aimArm()
     if not isActive then return end
     if not isAiming then 
-        if alignOrientation then
-            alignOrientation.Enabled = false
+        if bodyGyro then
+            bodyGyro.Enabled = false
         end
         return 
     end
     if not targetPlayer then 
-        if alignOrientation then
-            alignOrientation.Enabled = false
+        if bodyGyro then
+            bodyGyro.Enabled = false
         end
         return 
     end
     
     local targetChar = targetPlayer.Character
     if not targetChar then 
-        if alignOrientation then
-            alignOrientation.Enabled = false
+        if bodyGyro then
+            bodyGyro.Enabled = false
         end
         return 
     end
     
     local targetArm = getClosestArm(targetChar)
     if not targetArm then 
-        if alignOrientation then
-            alignOrientation.Enabled = false
+        if bodyGyro then
+            bodyGyro.Enabled = false
         end
         return 
     end
@@ -398,25 +413,25 @@ local function aimArm()
     local playerArm = getPlayerArm()
     if not playerArm then return end
     
+    -- Setup BodyGyro if needed
+    if not bodyGyro or bodyGyro.Parent ~= playerArm then
+        setupBodyGyro(playerArm)
+    end
+    
     -- Calculate direction to target arm
     local direction = (targetArm.Position - playerArm.Position).unit
     
-    -- SIMPLE: Just rotate the arm using CFrame angles without moving it
-    -- This is the most stable method
-    local lookAtCFrame = CFrame.lookAt(Vector3.new(0,0,0), direction)
+    -- Enable BodyGyro
+    bodyGyro.Enabled = true
     
-    -- Apply only rotation, keep position exactly the same
-    local newCFrame = CFrame.new(playerArm.Position) * lookAtCFrame.Rotation
-    playerArm.CFrame = newCFrame
-    
-    -- IMPORTANT: We also need to update the child parts of the arm
-    -- But this is the simplest approach that won't fling
+    -- Set the CFrame to look at the target
+    bodyGyro.CFrame = CFrame.lookAt(Vector3.new(0,0,0), direction)
 end
 
 -- Run aimbot every frame
 runService.RenderStepped:Connect(aimArm)
 
--- M1 click for visual feedback
+-- M1 click for visual feedback on target arm
 mouse.Button1Down:Connect(function()
     if not isActive then return end
     if not targetPlayer then return end
@@ -438,6 +453,9 @@ targetService.PlayerRemoving:Connect(function(playerLeft)
         dropdown.Text = "▼ Select player..."
         statusLabel.Text = "⚡ Aiming at: None"
         isAiming = false
+        if bodyGyro then
+            bodyGyro.Enabled = false
+        end
     end
 end)
 
@@ -447,7 +465,25 @@ targetService.PlayerAdded:Connect(function()
     end
 end)
 
+-- Handle character respawn
 player.CharacterAdded:Connect(function(newChar)
     character = newChar
     isAiming = false
+    if bodyGyro then
+        bodyGyro:Destroy()
+        bodyGyro = nil
+    end
+    task.wait(0.5)
+    -- Re-setup BodyGyro on new arm
+    local arm = getPlayerArm()
+    if arm then
+        setupBodyGyro(arm)
+    end
 end)
+
+-- Initial setup
+task.wait(0.5)
+local arm = getPlayerArm()
+if arm then
+    setupBodyGyro(arm)
+end
