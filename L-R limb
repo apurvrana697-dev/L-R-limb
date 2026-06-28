@@ -3,77 +3,200 @@
 local player = game.Players.LocalPlayer
 local mouse = player:GetMouse()
 local targetService = game:GetService("Players")
+local runService = game:GetService("RunService")
+local camera = workspace.CurrentCamera
 
 -- Create UI
 local screenGui = Instance.new("ScreenGui")
 screenGui.Parent = player.PlayerGui
+screenGui.ResetOnSpawn = false
 
--- Main Frame
+-- Main Frame - Clean Modern Design
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 300, 0, 200)
-mainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-mainFrame.BackgroundTransparency = 0.1
+mainFrame.Size = UDim2.new(0, 340, 0, 280)
+mainFrame.Position = UDim2.new(0.5, -170, 0.5, -140)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+mainFrame.BackgroundTransparency = 0.05
 mainFrame.BorderSizePixel = 0
 mainFrame.Visible = false
 mainFrame.Parent = screenGui
 
--- UI Corner
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 12)
-corner.Parent = mainFrame
+-- Main Corner
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 16)
+mainCorner.Parent = mainFrame
+
+-- Subtle Shadow
+local shadow = Instance.new("ImageLabel")
+shadow.Size = UDim2.new(1, 20, 1, 20)
+shadow.Position = UDim2.new(0, -10, 0, -10)
+shadow.BackgroundTransparency = 1
+shadow.Image = "rbxassetid://1316045217"
+shadow.ImageColor3 = Color3.new(0, 0, 0)
+shadow.ImageTransparency = 0.6
+shadow.ZIndex = 0
+shadow.Parent = mainFrame
+
+-- Title
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 40)
+title.Position = UDim2.new(0, 0, 0, 5)
+title.BackgroundTransparency = 1
+title.Text = "🎯 AIMBOT CONTROLLER"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+title.Parent = mainFrame
+
+-- Divider Line
+local divider = Instance.new("Frame")
+divider.Size = UDim2.new(0.9, 0, 0, 1)
+divider.Position = UDim2.new(0.05, 0, 0, 45)
+divider.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+divider.BorderSizePixel = 0
+divider.Parent = mainFrame
+
+-- Toggle Section
+local toggleLabel = Instance.new("TextLabel")
+toggleLabel.Size = UDim2.new(0, 120, 0, 30)
+toggleLabel.Position = UDim2.new(0, 15, 0, 55)
+toggleLabel.BackgroundTransparency = 1
+toggleLabel.Text = "STATUS:"
+toggleLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
+toggleLabel.TextScaled = true
+toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+toggleLabel.Font = Enum.Font.Gotham
+toggleLabel.Parent = mainFrame
 
 -- Toggle Button
 local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0, 120, 0, 40)
-toggleBtn.Position = UDim2.new(0.5, -160, 0, 20)
-toggleBtn.BackgroundColor3 = Color3.fromRGB(70, 200, 70)
-toggleBtn.Text = "ON"
+toggleBtn.Size = UDim2.new(0, 100, 0, 34)
+toggleBtn.Position = UDim2.new(0, 135, 0, 53)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+toggleBtn.Text = "OFF"
 toggleBtn.TextColor3 = Color3.new(1, 1, 1)
 toggleBtn.TextScaled = true
+toggleBtn.Font = Enum.Font.GothamBold
 toggleBtn.Parent = mainFrame
 local toggleCorner = Instance.new("UICorner")
 toggleCorner.CornerRadius = UDim.new(0, 8)
 toggleCorner.Parent = toggleBtn
 
 -- Target Name Input
+local nameLabel = Instance.new("TextLabel")
+nameLabel.Size = UDim2.new(0, 140, 0, 25)
+nameLabel.Position = UDim2.new(0, 15, 0, 100)
+nameLabel.BackgroundTransparency = 1
+nameLabel.Text = "TARGET NAME:"
+nameLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
+nameLabel.TextScaled = true
+nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+nameLabel.Font = Enum.Font.Gotham
+nameLabel.Parent = mainFrame
+
 local nameBox = Instance.new("TextBox")
-nameBox.Size = UDim2.new(0, 200, 0, 30)
-nameBox.Position = UDim2.new(0.5, -100, 0, 80)
-nameBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-nameBox.Text = "Enter target name"
+nameBox.Size = UDim2.new(0, 170, 0, 30)
+nameBox.Position = UDim2.new(0, 155, 0, 97)
+nameBox.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+nameBox.Text = ""
+nameBox.PlaceholderText = "Enter username..."
 nameBox.TextColor3 = Color3.new(1, 1, 1)
+nameBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 130)
 nameBox.TextScaled = true
+nameBox.Font = Enum.Font.Gotham
+nameBox.ClearTextOnFocus = false
 nameBox.Parent = mainFrame
 local nameCorner = Instance.new("UICorner")
 nameCorner.CornerRadius = UDim.new(0, 6)
 nameCorner.Parent = nameBox
 
--- Target Selector (Dropdown)
+-- Server Target Selection
+local serverLabel = Instance.new("TextLabel")
+serverLabel.Size = UDim2.new(0, 180, 0, 25)
+serverLabel.Position = UDim2.new(0, 15, 0, 140)
+serverLabel.BackgroundTransparency = 1
+serverLabel.Text = "SELECT FROM SERVER:"
+serverLabel.TextColor3 = Color3.fromRGB(180, 180, 190)
+serverLabel.TextScaled = true
+serverLabel.TextXAlignment = Enum.TextXAlignment.Left
+serverLabel.Font = Enum.Font.Gotham
+serverLabel.Parent = mainFrame
+
 local dropdown = Instance.new("TextButton")
-dropdown.Size = UDim2.new(0, 200, 0, 30)
-dropdown.Position = UDim2.new(0.5, -100, 0, 130)
-dropdown.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-dropdown.Text = "Select target from server"
-dropdown.TextColor3 = Color3.new(1, 1, 1)
+dropdown.Size = UDim2.new(0, 170, 0, 32)
+dropdown.Position = UDim2.new(0, 155, 0, 137)
+dropdown.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+dropdown.Text = "▼ Select player..."
+dropdown.TextColor3 = Color3.fromRGB(200, 200, 210)
 dropdown.TextScaled = true
+dropdown.Font = Enum.Font.Gotham
 dropdown.Parent = mainFrame
 local dropdownCorner = Instance.new("UICorner")
 dropdownCorner.CornerRadius = UDim.new(0, 6)
 dropdownCorner.Parent = dropdown
 
--- Dropdown List (hidden initially)
+-- Dropdown List (Scrollable)
 local listFrame = Instance.new("ScrollingFrame")
-listFrame.Size = UDim2.new(0, 200, 0, 100)
-listFrame.Position = UDim2.new(0.5, -100, 0, 165)
-listFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+listFrame.Size = UDim2.new(0, 170, 0, 120)
+listFrame.Position = UDim2.new(0, 155, 0, 173)
+listFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+listFrame.BorderSizePixel = 0
 listFrame.Visible = false
+listFrame.ScrollBarThickness = 4
 listFrame.Parent = mainFrame
 local listCorner = Instance.new("UICorner")
 listCorner.CornerRadius = UDim.new(0, 6)
 listCorner.Parent = listFrame
 
--- Toggle UI visibility key (e.g., "V")
+-- "None" Option
+local noneOption = Instance.new("TextButton")
+noneOption.Size = UDim2.new(1, 0, 0, 32)
+noneOption.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+noneOption.Text = "🚫 None (Target nobody)"
+noneOption.TextColor3 = Color3.fromRGB(255, 200, 200)
+noneOption.TextScaled = true
+noneOption.Font = Enum.Font.Gotham
+noneOption.Parent = listFrame
+local noneCorner = Instance.new("UICorner")
+noneCorner.CornerRadius = UDim.new(0, 4)
+noneCorner.Parent = noneOption
+
+noneOption.MouseButton1Click:Connect(function()
+    targetPlayer = nil
+    dropdown.Text = "▼ None selected"
+    listFrame.Visible = false
+end)
+
+-- Status Label
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, -30, 0, 25)
+statusLabel.Position = UDim2.new(0, 15, 0, 210)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "⚡ Aiming at: None"
+statusLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
+statusLabel.TextScaled = true
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.Parent = mainFrame
+
+-- Keybind Hint
+local hintLabel = Instance.new("TextLabel")
+hintLabel.Size = UDim2.new(1, 0, 0, 20)
+hintLabel.Position = UDim2.new(0, 0, 0, 250)
+hintLabel.BackgroundTransparency = 1
+hintLabel.Text = "Press V to toggle UI"
+hintLabel.TextColor3 = Color3.fromRGB(100, 100, 110)
+hintLabel.TextScaled = true
+hintLabel.Font = Enum.Font.Gotham
+hintLabel.Parent = mainFrame
+
+-- Variables
+local targetPlayer = nil
+local isActive = false
+local currentTarget = nil
+local aimPart = nil
+
+-- Toggle UI visibility
 local uiToggleKey = Enum.KeyCode.V
 local uiVisible = false
 
@@ -85,12 +208,79 @@ game:GetService("UserInputService").InputBegan:Connect(function(input, processed
     end
 end)
 
--- Variables
-local targetPlayer = nil
-local isActive = false
+-- Function to update dropdown list
+local function updateDropdown()
+    -- Clear existing buttons (keep "None" option)
+    for _, child in pairs(listFrame:GetChildren()) do
+        if child ~= noneOption and child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+    
+    local players = targetService:GetPlayers()
+    local count = 1
+    for _, p in pairs(players) do
+        if p ~= player and p.Character then
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(1, 0, 0, 32)
+            btn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+            btn.Text = p.Name
+            btn.TextColor3 = Color3.fromRGB(220, 220, 230)
+            btn.TextScaled = true
+            btn.Font = Enum.Font.Gotham
+            btn.Parent = listFrame
+            
+            local btnCorner = Instance.new("UICorner")
+            btnCorner.CornerRadius = UDim.new(0, 4)
+            btnCorner.Parent = btn
+            
+            -- Position after "None" option
+            btn.Position = UDim2.new(0, 0, 0, count * 34)
+            
+            btn.MouseButton1Click:Connect(function()
+                targetPlayer = p
+                dropdown.Text = "▼ " .. p.Name
+                listFrame.Visible = false
+                statusLabel.Text = "⚡ Aiming at: " .. p.Name
+            end)
+            
+            count = count + 1
+        end
+    end
+    
+    if count == 1 then
+        statusLabel.Text = "⚡ No players found"
+    end
+    
+    listFrame.CanvasSize = UDim2.new(0, 0, 0, count * 36 + 10)
+end
 
--- Function to get target from name
+-- Dropdown toggle
+dropdown.MouseButton1Click:Connect(function()
+    listFrame.Visible = not listFrame.Visible
+    if listFrame.Visible then
+        updateDropdown()
+    end
+end)
+
+-- Toggle activation
+toggleBtn.MouseButton1Click:Connect(function()
+    isActive = not isActive
+    toggleBtn.BackgroundColor3 = isActive and Color3.fromRGB(60, 200, 100) or Color3.fromRGB(220, 60, 60)
+    toggleBtn.Text = isActive and "ON" or "OFF"
+    
+    if isActive then
+        statusLabel.Text = statusLabel.Text .. " 🟢 ACTIVE"
+    else
+        statusLabel.Text = string.gsub(statusLabel.Text, " 🟢 ACTIVE", "")
+        currentTarget = nil
+        aimPart = nil
+    end
+end)
+
+-- Find target from name input
 local function getTargetFromName(name)
+    if name == "" or name == nil then return nil end
     for _, p in pairs(targetService:GetPlayers()) do
         if p.Name:lower():find(name:lower()) then
             return p
@@ -99,93 +289,118 @@ local function getTargetFromName(name)
     return nil
 end
 
--- Function to update dropdown list
-local function updateDropdown()
-    for _, child in pairs(listFrame:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
+-- Name input change
+nameBox.FocusLost:Connect(function()
+    local name = nameBox.Text
+    if name ~= "" then
+        local found = getTargetFromName(name)
+        if found then
+            targetPlayer = found
+            dropdown.Text = "▼ " .. found.Name
+            statusLabel.Text = "⚡ Aiming at: " .. found.Name
+        else
+            statusLabel.Text = "⚡ Player not found"
         end
     end
+end)
+
+-- Function to get closest arm
+local function getClosestArm(character)
+    if not character then return nil end
     
-    local players = targetService:GetPlayers()
-    for _, p in pairs(players) do
-        if p ~= player then
-            local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, 0, 0, 30)
-            btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-            btn.Text = p.Name
-            btn.TextColor3 = Color3.new(1, 1, 1)
-            btn.TextScaled = true
-            btn.Parent = listFrame
-            
-            local btnCorner = Instance.new("UICorner")
-            btnCorner.CornerRadius = UDim.new(0, 4)
-            btnCorner.Parent = btn
-            
-            btn.MouseButton1Click:Connect(function()
-                targetPlayer = p
-                dropdown.Text = "Target: " .. p.Name
-                listFrame.Visible = false
-            end)
-        end
+    local leftArm = character:FindFirstChild("Left Arm") or character:FindFirstChild("LeftArm")
+    local rightArm = character:FindFirstChild("Right Arm") or character:FindFirstChild("RightArm")
+    
+    if not leftArm and not rightArm then return nil end
+    
+    local cameraPos = camera.CFrame.Position
+    
+    -- If only one arm exists, return that one
+    if leftArm and not rightArm then return leftArm end
+    if rightArm and not leftArm then return rightArm end
+    
+    -- Calculate distance to each arm
+    local leftPos = leftArm.Position
+    local rightPos = rightArm.Position
+    
+    local distLeft = (leftPos - cameraPos).Magnitude
+    local distRight = (rightPos - cameraPos).Magnitude
+    
+    -- Return the closest arm
+    if distLeft <= distRight then
+        return leftArm
+    else
+        return rightArm
     end
-    listFrame.CanvasSize = UDim2.new(0, 0, 0, #listFrame:GetChildren() * 32)
 end
 
--- Dropdown toggle
-dropdown.MouseButton1Click:Connect(function()
-    listFrame.Visible = not listFrame.Visible
-    updateDropdown()
-end)
-
--- Toggle activation
-toggleBtn.MouseButton1Click:Connect(function()
-    isActive = not isActive
-    toggleBtn.BackgroundColor3 = isActive and Color3.fromRGB(70, 200, 70) or Color3.fromRGB(200, 70, 70)
-    toggleBtn.Text = isActive and "ON" or "OFF"
-end)
-
--- M1 click detection
-mouse.Button1Down:Connect(function()
+-- Aimbot function
+local function aimbot()
     if not isActive then return end
-    
-    -- If name input has a value, try to use it
-    local name = nameBox.Text
-    if name ~= "Enter target name" and name ~= "" then
-        targetPlayer = getTargetFromName(name)
-        if targetPlayer then
-            dropdown.Text = "Target: " .. targetPlayer.Name
-        end
+    if not targetPlayer then 
+        currentTarget = nil
+        return 
     end
     
-    if not targetPlayer then return end
+    -- Check if target still exists
+    if not targetPlayer.Character then
+        currentTarget = nil
+        return
+    end
     
     local character = targetPlayer.Character
     if not character then return end
     
-    -- Get left and right arms only
-    local leftArm = character:FindFirstChild("Left Arm") or character:FindFirstChild("LeftArm")
-    local rightArm = character:FindFirstChild("Right Arm") or character:FindFirstChild("RightArm")
+    -- Get closest arm
+    local arm = getClosestArm(character)
+    if not arm then return end
     
-    -- Target only these limbs
-    if leftArm then
-        -- Example: Highlight or manipulate left arm
-        leftArm.BrickColor = BrickColor.new("Bright red")
-        wait(0.1)
-        leftArm.BrickColor = BrickColor.new("White")
+    -- Only update if target changed
+    if currentTarget ~= arm then
+        currentTarget = arm
+        aimPart = arm
     end
     
-    if rightArm then
-        rightArm.BrickColor = BrickColor.new("Bright red")
-        wait(0.1)
-        rightArm.BrickColor = BrickColor.new("White")
+    -- Aim at the arm
+    if aimPart then
+        local aimPosition = aimPart.Position
+        camera.CFrame = CFrame.new(camera.CFrame.Position, aimPosition)
+    end
+end
+
+-- Run aimbot every frame
+runService.RenderStepped:Connect(aimbot)
+
+-- M1 click for visual feedback
+mouse.Button1Down:Connect(function()
+    if not isActive then return end
+    if not targetPlayer then return end
+    if not targetPlayer.Character then return end
+    
+    local arm = getClosestArm(targetPlayer.Character)
+    if arm then
+        -- Visual feedback - flash red
+        local originalColor = arm.BrickColor
+        arm.BrickColor = BrickColor.new("Bright red")
+        task.wait(0.05)
+        arm.BrickColor = originalColor
     end
 end)
 
 -- Cleanup for disconnected players
-targetService.PlayerRemoving:Connect(function()
-    if targetPlayer and not targetService:FindFirstChild(targetPlayer.Name) then
+targetService.PlayerRemoving:Connect(function(playerLeft)
+    if targetPlayer and targetPlayer == playerLeft then
         targetPlayer = nil
-        dropdown.Text = "Select target from server"
+        dropdown.Text = "▼ Select player..."
+        statusLabel.Text = "⚡ Aiming at: None"
+        currentTarget = nil
+        aimPart = nil
+    end
+end)
+
+-- Auto-update dropdown when players join
+targetService.PlayerAdded:Connect(function()
+    if listFrame.Visible then
+        updateDropdown()
     end
 end)
