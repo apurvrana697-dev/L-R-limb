@@ -1,10 +1,10 @@
 -- LocalScript inside StarterGui or a ScreenGui
 
 local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
 local mouse = player:GetMouse()
 local targetService = game:GetService("Players")
 local runService = game:GetService("RunService")
-local camera = workspace.CurrentCamera
 local userInputService = game:GetService("UserInputService")
 
 -- Create UI
@@ -43,7 +43,7 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 40)
 title.Position = UDim2.new(0, 0, 0, 5)
 title.BackgroundTransparency = 1
-title.Text = "🎯 AIMBOT CONTROLLER"
+title.Text = "🎯 ARM AIMBOT"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.TextScaled = true
 title.Font = Enum.Font.GothamBold
@@ -205,9 +205,14 @@ hintLabel.Parent = mainFrame
 -- Variables
 local targetPlayer = nil
 local isActive = false
-local currentTarget = nil
-local aimPart = nil
 local isAiming = false
+local currentTargetArm = nil
+
+-- Get character
+local function getCharacter()
+    character = player.Character or player.CharacterAdded:Wait()
+    return character
+end
 
 -- Toggle UI visibility (V key)
 local uiToggleKey = Enum.KeyCode.V
@@ -232,9 +237,8 @@ userInputService.InputBegan:Connect(function(input, processed)
             statusLabel.Text = "⚡ Aiming at: " .. (targetPlayer and targetPlayer.Name or "None") .. " 🟢 ACTIVE"
         else
             statusLabel.Text = string.gsub(statusLabel.Text, " 🟢 ACTIVE", "")
-            currentTarget = nil
-            aimPart = nil
             isAiming = false
+            currentTargetArm = nil
         end
     end
     
@@ -250,14 +254,12 @@ userInputService.InputEnded:Connect(function(input)
     -- LMB Release - Stop aiming
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         isAiming = false
-        currentTarget = nil
-        aimPart = nil
+        currentTargetArm = nil
     end
 end)
 
 -- Function to update dropdown list
 local function updateDropdown()
-    -- Clear existing buttons (keep "None" option)
     for _, child in pairs(listFrame:GetChildren()) do
         if child ~= noneOption and child:IsA("TextButton") then
             child:Destroy()
@@ -281,7 +283,6 @@ local function updateDropdown()
             btnCorner.CornerRadius = UDim.new(0, 4)
             btnCorner.Parent = btn
             
-            -- Position after "None" option
             btn.Position = UDim2.new(0, 0, 0, count * 34)
             
             btn.MouseButton1Click:Connect(function()
@@ -336,7 +337,7 @@ nameBox.FocusLost:Connect(function()
     end
 end)
 
--- Function to get closest arm
+-- Function to get closest arm (target's arm)
 local function getClosestArm(character)
     if not character then return nil end
     
@@ -345,20 +346,20 @@ local function getClosestArm(character)
     
     if not leftArm and not rightArm then return nil end
     
-    local cameraPos = camera.CFrame.Position
+    local characterPos = character.PrimaryPart and character.PrimaryPart.Position or character.HumanoidRootPart.Position
     
     -- If only one arm exists, return that one
     if leftArm and not rightArm then return leftArm end
     if rightArm and not leftArm then return rightArm end
     
-    -- Calculate distance to each arm
+    -- Calculate distance from character center to each arm
     local leftPos = leftArm.Position
     local rightPos = rightArm.Position
     
-    local distLeft = (leftPos - cameraPos).Magnitude
-    local distRight = (rightPos - cameraPos).Magnitude
+    local distLeft = (leftPos - characterPos).Magnitude
+    local distRight = (rightPos - characterPos).Magnitude
     
-    -- Return the closest arm
+    -- Return the closest arm to the body (more natural)
     if distLeft <= distRight then
         return leftArm
     else
@@ -366,61 +367,92 @@ local function getClosestArm(character)
     end
 end
 
--- Aimbot function
-local function aimbot()
+-- Function to get player's arm (which arm to use for aiming)
+local function getPlayerArm()
+    local char = getCharacter()
+    if not char then return nil end
+    
+    -- Get the right arm by default (can change to left if needed)
+    local arm = char:FindFirstChild("Right Arm") or char:FindFirstChild("RightArm")
+    if arm then return arm end
+    
+    -- Fallback to left arm
+    arm = char:FindFirstChild("Left Arm") or char:FindFirstChild("LeftArm")
+    return arm
+end
+
+-- Main arm aiming function
+local function aimArm()
     if not isActive then return end
     if not isAiming then 
-        currentTarget = nil
-        aimPart = nil
+        currentTargetArm = nil
         return 
     end
     if not targetPlayer then 
-        currentTarget = nil
+        currentTargetArm = nil
         return 
     end
     
-    -- Check if target still exists
-    if not targetPlayer.Character then
-        currentTarget = nil
-        return
+    -- Get target character
+    local targetChar = targetPlayer.Character
+    if not targetChar then 
+        currentTargetArm = nil
+        return 
     end
     
-    local character = targetPlayer.Character
-    if not character then return end
+    -- Get target arm (closest to body)
+    local targetArm = getClosestArm(targetChar)
+    if not targetArm then 
+        currentTargetArm = nil
+        return 
+    end
     
-    -- Get closest arm
-    local arm = getClosestArm(character)
-    if not arm then return end
+    -- Get player's arm
+    local playerArm = getPlayerArm()
+    if not playerArm then return end
     
     -- Only update if target changed
-    if currentTarget ~= arm then
-        currentTarget = arm
-        aimPart = arm
+    if currentTargetArm ~= targetArm then
+        currentTargetArm = targetArm
     end
     
-    -- Aim at the arm
-    if aimPart then
-        local aimPosition = aimPart.Position
-        camera.CFrame = CFrame.new(camera.CFrame.Position, aimPosition)
+    -- Calculate direction from player's arm to target arm
+    local armPos = playerArm.Position
+    local targetPos = targetArm.Position
+    local direction = (targetPos - armPos).unit
+    
+    -- Create CFrame for the arm to look at target
+    -- This rotates the arm to point at the target arm
+    local lookAt = CFrame.lookAt(armPos, targetPos)
+    
+    -- Apply the rotation to the arm
+    playerArm.CFrame = CFrame.new(armPos, targetPos)
+    
+    -- Also rotate the handle/weld if it exists for smoother aiming
+    local weld = playerArm:FindFirstChild("Weld") or playerArm:FindFirstChild("Motor6D")
+    if weld then
+        -- Adjust the weld CFrame to maintain arm orientation
+        local originalCFrame = weld.C0 or weld.Part0.CFrame:inverse() * weld.Part1.CFrame
+        -- This is a simplified approach - you might need to adjust for your specific character
     end
 end
 
 -- Run aimbot every frame
-runService.RenderStepped:Connect(aimbot)
+runService.RenderStepped:Connect(aimArm)
 
--- M1 click for visual feedback
+-- M1 click for visual feedback on target arm
 mouse.Button1Down:Connect(function()
     if not isActive then return end
     if not targetPlayer then return end
     if not targetPlayer.Character then return end
     
-    local arm = getClosestArm(targetPlayer.Character)
-    if arm then
+    local targetArm = getClosestArm(targetPlayer.Character)
+    if targetArm then
         -- Visual feedback - flash red
-        local originalColor = arm.BrickColor
-        arm.BrickColor = BrickColor.new("Bright red")
+        local originalColor = targetArm.BrickColor
+        targetArm.BrickColor = BrickColor.new("Bright red")
         task.wait(0.05)
-        arm.BrickColor = originalColor
+        targetArm.BrickColor = originalColor
     end
 end)
 
@@ -430,8 +462,7 @@ targetService.PlayerRemoving:Connect(function(playerLeft)
         targetPlayer = nil
         dropdown.Text = "▼ Select player..."
         statusLabel.Text = "⚡ Aiming at: None"
-        currentTarget = nil
-        aimPart = nil
+        currentTargetArm = nil
         isAiming = false
     end
 end)
@@ -441,4 +472,12 @@ targetService.PlayerAdded:Connect(function()
     if listFrame.Visible then
         updateDropdown()
     end
+end)
+
+-- Handle character respawn
+player.CharacterAdded:Connect(function(newChar)
+    character = newChar
+    -- Reset aiming state
+    currentTargetArm = nil
+    isAiming = false
 end)
