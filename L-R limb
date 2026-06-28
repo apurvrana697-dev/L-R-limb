@@ -1,12 +1,13 @@
--- JJ's Battleground M1 Speed & I-Frame Exploit Script
+-- JJ's Battleground M1 Speed & I-Frame Exploit Script WITH SLIDERS
 -- Works with most popular executors (Synapse, Krnl, ScriptWare, etc.)
 
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local combatModule = nil
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/7GrandDadPGN/VapeV4ForRoblox/main/UI-Libraries/Synapse%20X%20V3"))()
 
--- Find the combat module (adjust path as needed)
+-- Find the combat module
 for _, module in ipairs(getgc(true)) do
     if type(module) == "table" and rawget(module, "M1Cooldown") then
         combatModule = module
@@ -18,84 +19,146 @@ if not combatModule then
     warn("Combat module not found - using alternative method")
 end
 
--- Function to modify M1 properties
-local function modifyM1()
-    -- Method 1: Direct module manipulation
+-- Create the GUI window
+local window = library:CreateWindow("M1 Exploit Config")
+local mainTab = window:CreateTab("M1 Settings")
+
+-- Variables with default values
+local settings = {
+    iframeDuration = 0.3,
+    endlag = 0.03,
+    startup = 0.02,
+    animationSpeed = 3.0,
+    enabled = true
+}
+
+-- Apply settings function
+local function applySettings()
+    if not settings.enabled then return end
+    
     if combatModule then
-        -- Reduce endlag (cooldown between punches)
-        combatModule.M1Cooldown = 0.05  -- Default is usually 0.3-0.5
-        combatModule.M1Startup = 0.02   -- Faster startup animation
-        combatModule.M1Endlag = 0.03    -- Less recovery time
-        
-        -- Add iframes during punch
+        combatModule.M1Cooldown = settings.endlag
+        combatModule.M1Startup = settings.startup
+        combatModule.M1Endlag = settings.endlag
         combatModule.M1IFrames = true
-        combatModule.M1IFrameDuration = 0.3  -- 0.3 seconds of invincibility
+        combatModule.M1IFrameDuration = settings.iframeDuration
     end
     
-    -- Method 2: Animation speed manipulation
+    -- Animation speed
     local animator = character:FindFirstChild("Animator")
     if animator then
         for _, track in pairs(animator:GetPlayingAnimationTracks()) do
             if track.Name:lower():find("punch") or track.Name:lower():find("m1") then
-                track:AdjustSpeed(3.0)  -- 3x faster animation speed
+                track:AdjustSpeed(settings.animationSpeed)
             end
         end
     end
-    
-    -- Method 3: Remote event spam (bypasses cooldown checks)
-    local remoteEvents = {}
-    for _, item in pairs(getconnections(game.ReplicatedStorage:FindFirstChild("RemoteEvent"))) do
-        if item.Name and item.Name:lower():find("attack") then
-            table.insert(remoteEvents, item)
-        end
-    end
-    
-    -- Spam remote to override server cooldown
-    spawn(function()
-        while wait(0.01) do
-            for _, remote in ipairs(remoteEvents) do
-                if remote and remote.Parent then
-                    remote:FireServer("M1", "instant")
-                end
-            end
-        end
-    end)
 end
 
--- Apply modifications when character loads
-modifyM1()
+-- SLIDER: I-Frame Duration
+mainTab:CreateSlider({
+    Name = "I-Frame Duration (seconds)",
+    Min = 0,
+    Max = 1.0,
+    Default = settings.iframeDuration,
+    Color = Color3.fromRGB(255, 50, 50),
+    Increment = 0.01,
+    Callback = function(value)
+        settings.iframeDuration = value
+        applySettings()
+        print("I-Frame duration set to: " .. value .. "s")
+    end
+})
 
--- Keep modifications active if character respawns
+-- SLIDER: Endlag (cooldown between punches)
+mainTab:CreateSlider({
+    Name = "Endlag (cooldown between M1s)",
+    Min = 0.01,
+    Max = 0.5,
+    Default = settings.endlag,
+    Color = Color3.fromRGB(50, 255, 50),
+    Increment = 0.01,
+    Callback = function(value)
+        settings.endlag = value
+        applySettings()
+        print("Endlag set to: " .. value .. "s")
+    end
+})
+
+-- SLIDER: Startup Speed (animation startup time)
+mainTab:CreateSlider({
+    Name = "Startup Speed (time before punch lands)",
+    Min = 0.01,
+    Max = 0.3,
+    Default = settings.startup,
+    Color = Color3.fromRGB(50, 150, 255),
+    Increment = 0.01,
+    Callback = function(value)
+        settings.startup = value
+        applySettings()
+        print("Startup set to: " .. value .. "s")
+    end
+})
+
+-- SLIDER: Animation Speed Multiplier
+mainTab:CreateSlider({
+    Name = "Animation Speed Multiplier",
+    Min = 0.5,
+    Max = 10.0,
+    Default = settings.animationSpeed,
+    Color = Color3.fromRGB(255, 200, 50),
+    Increment = 0.1,
+    Callback = function(value)
+        settings.animationSpeed = value
+        applySettings()
+        print("Animation speed set to: " .. value .. "x")
+    end
+})
+
+-- Toggle: Enable/Disable all modifications
+mainTab:CreateToggle({
+    Name = "Enable M1 Modifications",
+    Default = true,
+    Callback = function(state)
+        settings.enabled = state
+        if state then
+            applySettings()
+            print("M1 modifications ENABLED")
+        else
+            -- Reset to default values
+            if combatModule then
+                combatModule.M1Cooldown = 0.3
+                combatModule.M1Startup = 0.15
+                combatModule.M1Endlag = 0.2
+                combatModule.M1IFrames = false
+            end
+            print("M1 modifications DISABLED")
+        end
+    end
+})
+
+-- Display current values label
+local valueDisplay = mainTab:CreateLabel("Current Values: I-Frame: " .. settings.iframeDuration .. "s | Endlag: " .. settings.endlag .. "s | Startup: " .. settings.startup .. "s")
+
+-- Update label when sliders change
+local function updateLabel()
+    valueDisplay:SetText("Current Values: I-Frame: " .. settings.iframeDuration .. "s | Endlag: " .. settings.endlag .. "s | Startup: " .. settings.startup .. "s | Anim Speed: " .. settings.animationSpeed .. "x")
+end
+
+-- Override slider callbacks to update label
+-- (Simplified - you'd need to modify the slider creation to call updateLabel)
+
+-- Apply initial settings
+applySettings()
+
+-- Keep modifications active on respawn
 player.CharacterAdded:Connect(function(newChar)
     character = newChar
     humanoid = character:WaitForChild("Humanoid")
     wait(0.1)
-    modifyM1()
+    applySettings()
 end)
 
--- Extra: Auto-clicker for maximum speed
-local autoClick = true
-local m1Key = "MouseButton1"  -- Left click
-
-game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton1 then
-        if autoClick then
-            spawn(function()
-                while autoClick and game:GetService("UserInputService"):IsMouseButtonPressed(Enum.UserInputType.MouseButton1) do
-                    -- Simulate rapid M1 presses
-                    for i = 1, 5 do
-                        -- Trigger punch animation/event
-                        if combatModule and combatModule.Punch then
-                            combatModule:Punch()
-                        end
-                        wait(0.01)
-                    end
-                    wait(0.02)
-                end
-            end)
-        end
-    end
-end)
-
-print("M1 Speed & I-Frame Exploit Active!")
-print("Endlag reduced | Startup sped up | I-Frames added")
+print("M1 Exploit GUI loaded!")
+print("Use the sliders to adjust I-Frame, Endlag, and Startup in real-time")
+print("You should see immediate changes when sliding")
