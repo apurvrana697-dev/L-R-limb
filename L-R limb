@@ -1,285 +1,385 @@
--- JJS COLLISION TOGGLE + GOD MODE
--- Turn player collision on/off + invincibility
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reach Controller</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            background: #0b0e17;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        /* Main UI Panel */
+        .panel {
+            background: linear-gradient(145deg, #141a26, #1e2535);
+            border-radius: 28px;
+            padding: 30px 34px;
+            width: 380px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(4px);
+            transition: all 0.25s ease;
+            position: relative;
+        }
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .panel-header h2 {
+            color: #f0f4ff;
+            font-weight: 500;
+            font-size: 22px;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, #b7c9ff, #7b9cff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .toggle-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: none;
+            color: #bcc9f0;
+            font-size: 26px;
+            width: 48px;
+            height: 48px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.2s;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: white;
+            transform: scale(1.02);
+        }
+        /* slider section */
+        .slider-section {
+            margin: 18px 0 22px;
+        }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            color: #a8bae0;
+            font-size: 15px;
+            font-weight: 400;
+            margin-bottom: 8px;
+        }
+        .slider-label span:first-child {
+            color: #d0ddff;
+        }
+        .slider-value {
+            background: #0b0f19;
+            padding: 4px 16px;
+            border-radius: 40px;
+            font-weight: 600;
+            color: #96b0ff;
+            font-size: 15px;
+            border: 1px solid #2d3850;
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 12px;
+            background: linear-gradient(90deg, #1f2a40, #3d507a);
+            outline: none;
+            transition: background 0.2s;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #6e8eff, #3f62d6);
+            cursor: pointer;
+            box-shadow: 0 0 20px #3f62d6aa, 0 0 4px #88a2ff;
+            border: 2px solid #b5cbff;
+            transition: 0.15s;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.12);
+            background: radial-gradient(circle at 30% 30%, #88a2ff, #4f72e6);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4f72e6;
+            cursor: pointer;
+            border: 2px solid #b5cbff;
+        }
+        .update-btn {
+            background: linear-gradient(135deg, #3f62d6, #2847b0);
+            border: none;
+            color: white;
+            font-weight: 600;
+            font-size: 17px;
+            padding: 14px 0;
+            width: 100%;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 8px 24px #1b2f7a55;
+            letter-spacing: 0.3px;
+            border: 1px solid #6b87f0;
+            margin-top: 8px;
+        }
+        .update-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px #1f3288aa;
+            background: linear-gradient(135deg, #5373f0, #2f4fc0);
+        }
+        .update-btn:active {
+            transform: scale(0.97);
+            box-shadow: 0 4px 16px #14266e;
+        }
+        .status-line {
+            display: flex;
+            justify-content: space-between;
+            color: #7d92c0;
+            font-size: 13px;
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px solid #222d47;
+        }
+        .status-line span:last-child {
+            color: #7dffb3;
+            font-weight: 400;
+        }
+        .hidden-panel {
+            display: none !important;
+        }
+        /* toggle indicator */
+        .toggle-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 10px;
+            background: #5bff8a;
+            margin-right: 10px;
+            box-shadow: 0 0 12px #00ff6a;
+        }
+        .footer-note {
+            color: #4d5f85;
+            font-size: 11px;
+            text-align: center;
+            margin-top: 16px;
+            letter-spacing: 0.3px;
+        }
+        /* close button x */
+        .close-icon {
+            font-size: 24px;
+            line-height: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="panel" id="mainPanel">
+        <!-- Header with toggle close -->
+        <div class="panel-header">
+            <h2>⚡ Reach Control</h2>
+            <button class="toggle-btn" id="togglePanelBtn" aria-label="Toggle panel visibility">
+                <span class="close-icon">✕</span>
+            </button>
+        </div>
 
-local player = game.Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
-local hum = char:WaitForChild("Humanoid")
-local uis = game:GetService("UserInputService")
-local rs = game:GetService("RunService")
+        <!-- Slider area -->
+        <div class="slider-section">
+            <div class="slider-label">
+                <span>Reach distance</span>
+                <span class="slider-value" id="reachValueDisplay">10.0</span>
+            </div>
+            <input type="range" id="reachSlider" min="0" max="30" step="0.5" value="10.0">
+        </div>
 
--- State
-local collisionOff = false
-local godMode = false
-local uiOpen = true
-local loops = {}
+        <!-- Update button -->
+        <button class="update-btn" id="updateReachBtn">↻ Update Reach</button>
 
--- ===== CLEAN UI =====
-local gui = Instance.new("ScreenGui")
-gui.Name = "CollisionUI"
-gui.Parent = player.PlayerGui
-gui.ResetOnSpawn = false
+        <!-- status -->
+        <div class="status-line">
+            <span><span class="toggle-indicator"></span> Active</span>
+            <span id="currentReachStatus">Reach: 10.0</span>
+        </div>
+        <div class="footer-note">slider value updates on button click</div>
+    </div>
 
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 200, 0, 160)
-frame.Position = UDim2.new(0.5, -100, 0.5, -80)
-frame.BackgroundColor3 = Color3.fromRGB(8, 8, 18)
-frame.BackgroundTransparency = 0.1
-frame.BorderSizePixel = 0
-frame.Parent = gui
+    <script>
+        (function() {
+            "use strict";
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 12)
-corner.Parent = frame
+            // DOM elements
+            const panel = document.getElementById('mainPanel');
+            const toggleBtn = document.getElementById('togglePanelBtn');
+            const reachSlider = document.getElementById('reachSlider');
+            const reachValueDisplay = document.getElementById('reachValueDisplay');
+            const updateBtn = document.getElementById('updateReachBtn');
+            const currentReachStatus = document.getElementById('currentReachStatus');
 
--- Glow border
-local glow = Instance.new("Frame")
-glow.Size = UDim2.new(1, 4, 1, 4)
-glow.Position = UDim2.new(0, -2, 0, -2)
-glow.BackgroundTransparency = 1
-glow.BorderSizePixel = 2
-glow.BorderColor3 = Color3.fromRGB(100, 200, 255)
-glow.Parent = frame
+            // track panel visibility (true = visible)
+            let isPanelVisible = true;
 
-local glowCorner = Instance.new("UICorner")
-glowCorner.CornerRadius = UDim.new(0, 13)
-glowCorner.Parent = glow
+            // --- Helper: update display & status ---
+            function updateReachDisplay(value) {
+                const num = parseFloat(value);
+                if (!isNaN(num)) {
+                    const formatted = num.toFixed(1);
+                    reachValueDisplay.textContent = formatted;
+                    currentReachStatus.textContent = `Reach: ${formatted}`;
+                }
+            }
 
--- Title
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 30)
-title.Position = UDim2.new(0, 0, 0, 5)
-title.BackgroundTransparency = 1
-title.Text = "✦ COLLISION ✦"
-title.TextColor3 = Color3.fromRGB(150, 210, 255)
-title.TextScaled = true
-title.Font = Enum.Font.GothamBold
-title.Parent = frame
+            // --- Slider input event (live update display) ---
+            reachSlider.addEventListener('input', function(e) {
+                const val = e.target.value;
+                updateReachDisplay(val);
+                // The slider value is shown live, but reach only updates on button click.
+            });
 
--- Collision Status
-local colStatus = Instance.new("TextLabel")
-colStatus.Size = UDim2.new(1, 0, 0, 20)
-colStatus.Position = UDim2.new(0, 0, 0, 35)
-colStatus.BackgroundTransparency = 1
-colStatus.Text = "COLLISION: ON"
-colStatus.TextColor3 = Color3.fromRGB(100, 255, 150)
-colStatus.TextScaled = true
-colStatus.Font = Enum.Font.Gotham
-colStatus.Parent = frame
+            // --- Update button: applies the current slider value as "reach" ---
+            function applyReachUpdate() {
+                const currentVal = reachSlider.value;
+                const num = parseFloat(currentVal);
+                if (!isNaN(num)) {
+                    const formatted = num.toFixed(1);
+                    // In a real Roblox script, you'd call the game's remote or modify the character.
+                    // Here we just update the status and show a temporary visual feedback.
+                    currentReachStatus.textContent = `Reach: ${formatted} (updated)`;
+                    // Flash feedback on button
+                    updateBtn.style.transform = 'scale(0.96)';
+                    setTimeout(() => {
+                        updateBtn.style.transform = '';
+                    }, 120);
+                    // Also update the display to be consistent
+                    reachValueDisplay.textContent = formatted;
+                    // subtle console log for demonstration (not needed in final)
+                    console.log(`[Reach] Set to ${formatted}`);
+                } else {
+                    currentReachStatus.textContent = `Reach: invalid`;
+                }
+            }
 
--- God Mode Status
-local godStatus = Instance.new("TextLabel")
-godStatus.Size = UDim2.new(1, 0, 0, 20)
-godStatus.Position = UDim2.new(0, 0, 0, 52)
-godStatus.BackgroundTransparency = 1
-godStatus.Text = "GOD MODE: OFF"
-godStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
-godStatus.TextScaled = true
-godStatus.Font = Enum.Font.Gotham
-godStatus.Parent = frame
+            updateBtn.addEventListener('click', applyReachUpdate);
 
--- Collision Toggle Button
-local colBtn = Instance.new("TextButton")
-colBtn.Size = UDim2.new(0.4, 0, 0, 30)
-colBtn.Position = UDim2.new(0.05, 0, 0.75, 0)
-colBtn.BackgroundColor3 = Color3.fromRGB(30, 60, 40)
-colBtn.BorderSizePixel = 0
-colBtn.Text = "NO CLIP"
-colBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-colBtn.TextScaled = true
-colBtn.Font = Enum.Font.GothamBold
-colBtn.Parent = frame
+            // --- Toggle panel visibility (close / open) ---
+            function togglePanel() {
+                if (isPanelVisible) {
+                    // Hide panel
+                    panel.classList.add('hidden-panel');
+                    toggleBtn.innerHTML = '<span style="font-size:26px;">◉</span>'; // open indicator
+                    toggleBtn.setAttribute('aria-label', 'Open panel');
+                    isPanelVisible = false;
+                } else {
+                    // Show panel
+                    panel.classList.remove('hidden-panel');
+                    toggleBtn.innerHTML = '<span class="close-icon">✕</span>';
+                    toggleBtn.setAttribute('aria-label', 'Close panel');
+                    isPanelVisible = true;
+                }
+            }
 
-local colCorner = Instance.new("UICorner")
-colCorner.CornerRadius = UDim.new(0, 6)
-colCorner.Parent = colBtn
+            toggleBtn.addEventListener('click', togglePanel);
 
--- God Mode Toggle Button
-local godBtn = Instance.new("TextButton")
-godBtn.Size = UDim2.new(0.4, 0, 0, 30)
-godBtn.Position = UDim2.new(0.55, 0, 0.75, 0)
-godBtn.BackgroundColor3 = Color3.fromRGB(60, 30, 30)
-godBtn.BorderSizePixel = 0
-godBtn.Text = "GOD"
-godBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-godBtn.TextScaled = true
-godBtn.Font = Enum.Font.GothamBold
-godBtn.Parent = frame
+            // --- extra: also close if user clicks outside? (optional, not needed) ---
+            // initialize status
+            updateReachDisplay(reachSlider.value);
 
-local godCorner = Instance.new("UICorner")
-godCorner.CornerRadius = UDim.new(0, 6)
-godCorner.Parent = godBtn
+            // ensure that if the panel is toggled hidden, we can still toggle it back using the button
+            // (the button is always visible because it's inside the panel, but when panel is hidden,
+            //  we need a way to reopen. In this design, the panel disappears completely.
+            //  We'll add a small floating reopen button if panel is hidden? 
+            //  For better UX, we create a small fixed reopen button when hidden.
+            //  Let's add it dynamically.
 
--- Keybind hint
-local keyHint = Instance.new("TextLabel")
-keyHint.Size = UDim2.new(1, 0, 0, 15)
-keyHint.Position = UDim2.new(0, 0, 0, 1, 0)
-keyHint.BackgroundTransparency = 1
-keyHint.Text = "[ F5 = UI ] [ F6 = NoClip ] [ F7 = God ]"
-keyHint.TextColor3 = Color3.fromRGB(60, 60, 90)
-keyHint.TextScaled = true
-keyHint.Font = Enum.Font.Gotham
-keyHint.Parent = frame
+            // Create a floating reopen button (hidden by default)
+            const reopenBtn = document.createElement('button');
+            reopenBtn.id = 'reopenPanelBtn';
+            reopenBtn.innerHTML = '⚡';
+            Object.assign(reopenBtn.style, {
+                position: 'fixed',
+                bottom: '30px',
+                right: '30px',
+                width: '60px',
+                height: '60px',
+                borderRadius: '60px',
+                background: 'linear-gradient(135deg, #3f62d6, #2847b0)',
+                border: 'none',
+                color: 'white',
+                fontSize: '32px',
+                boxShadow: '0 8px 32px #1b2f7a99',
+                cursor: 'pointer',
+                zIndex: '9999',
+                display: 'none',
+                transition: '0.2s',
+                border: '1px solid #6b87f0',
+                backdropFilter: 'blur(4px)'
+            });
+            reopenBtn.addEventListener('mouseenter', () => {
+                reopenBtn.style.transform = 'scale(1.08)';
+            });
+            reopenBtn.addEventListener('mouseleave', () => {
+                reopenBtn.style.transform = 'scale(1)';
+            });
+            document.body.appendChild(reopenBtn);
 
--- Close button
-local close = Instance.new("TextButton")
-close.Size = UDim2.new(0, 20, 0, 20)
-close.Position = UDim2.new(1, -25, 0, 5)
-close.BackgroundColor3 = Color3.fromRGB(50, 35, 35)
-close.BorderSizePixel = 0
-close.Text = "✕"
-close.TextColor3 = Color3.fromRGB(180, 130, 130)
-close.TextScaled = true
-close.Font = Enum.Font.Gotham
-close.Parent = frame
+            // modify toggle function to also show/hide reopen button
+            const originalToggle = togglePanel;
+            togglePanel = function() {
+                originalToggle();
+                if (isPanelVisible) {
+                    reopenBtn.style.display = 'none';
+                } else {
+                    reopenBtn.style.display = 'flex';
+                    reopenBtn.style.alignItems = 'center';
+                    reopenBtn.style.justifyContent = 'center';
+                }
+            };
 
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 4)
-closeCorner.Parent = close
+            // reopen button event
+            reopenBtn.addEventListener('click', function() {
+                if (!isPanelVisible) {
+                    togglePanel();
+                }
+            });
 
--- ===== COLLISION TOGGLE =====
+            // override the toggleBtn click to use new togglePanel
+            toggleBtn.removeEventListener('click', togglePanel);
+            toggleBtn.addEventListener('click', togglePanel);
 
-local function toggleCollision()
-    collisionOff = not collisionOff
-    
-    if char then
-        for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = not collisionOff
-                if collisionOff then
-                    part.Transparency = 0.5
-                    part.Material = Enum.Material.Neon
-                else
-                    part.Transparency = 0
-                    part.Material = Enum.Material.Plastic
-                end
-            end
-        end
-    end
-    
-    if collisionOff then
-        colBtn.Text = "CLIP OFF"
-        colBtn.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
-        colStatus.Text = "COLLISION: OFF"
-        colStatus.TextColor3 = Color3.fromRGB(255, 200, 100)
-    else
-        colBtn.Text = "NO CLIP"
-        colBtn.BackgroundColor3 = Color3.fromRGB(30, 60, 40)
-        colStatus.Text = "COLLISION: ON"
-        colStatus.TextColor3 = Color3.fromRGB(100, 255, 150)
-    end
-end
+            // also if panel is hidden by default? no, it starts visible.
+            // ensure reopen is hidden at start
+            reopenBtn.style.display = 'none';
 
--- ===== GOD MODE =====
+            // set initial reach status
+            currentReachStatus.textContent = `Reach: ${parseFloat(reachSlider.value).toFixed(1)}`;
 
-local function enableGod()
-    godMode = not godMode
-    
-    if godMode then
-        godBtn.Text = "GOD ON"
-        godBtn.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
-        godStatus.Text = "GOD MODE: ON"
-        godStatus.TextColor3 = Color3.fromRGB(100, 255, 150)
-        
-        -- God mode loops
-        local c1 = rs.Heartbeat:Connect(function()
-            if hum then
-                hum.Health = hum.MaxHealth
-                hum:SetAttribute("LastDamageTime", -999)
-                hum:SetAttribute("DamageCooldown", -999)
-            end
-        end)
-        table.insert(loops, c1)
-        
-        local c2 = rs.Stepped:Connect(function()
-            if char then
-                for _, obj in ipairs(char:GetDescendants()) do
-                    if obj:IsA("Script") or obj:IsA("LocalScript") then
-                        local name = obj.Name:lower()
-                        if name:find("hit") or name:find("damage") or name:find("attack") then
-                            obj:Destroy()
-                        end
-                    end
-                    if obj:IsA("BasePart") then
-                        obj.CanCollide = false
-                    end
-                end
-            end
-        end)
-        table.insert(loops, c2)
-        
-        local c3 = rs.RenderStepped:Connect(function()
-            if hum then
-                hum.Health = hum.MaxHealth
-            end
-        end)
-        table.insert(loops, c3)
-        
-    else
-        godBtn.Text = "GOD"
-        godBtn.BackgroundColor3 = Color3.fromRGB(60, 30, 30)
-        godStatus.Text = "GOD MODE: OFF"
-        godStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
-        
-        for _, c in ipairs(loops) do
-            c:Disconnect()
-        end
-        loops = {}
-        
-        if hum then
-            hum.MaxHealth = 100
-            hum.Health = 100
-        end
-    end
-end
+            // keyboard shortcut: Escape to toggle? optional
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    if (isPanelVisible) {
+                        togglePanel();
+                    }
+                }
+            });
 
--- ===== UI TOGGLE =====
-
-local function toggleUI()
-    uiOpen = not uiOpen
-    frame.Visible = uiOpen
-    close.Text = uiOpen and "✕" or "+"
-    close.BackgroundColor3 = uiOpen and Color3.fromRGB(50, 35, 35) or Color3.fromRGB(35, 50, 35)
-end
-
--- ===== KEYBINDS =====
-uis.InputBegan:Connect(function(input, gp)
-    if gp then return end
-    
-    if input.KeyCode == Enum.KeyCode.F5 then
-        toggleUI()
-    elseif input.KeyCode == Enum.KeyCode.F6 then
-        toggleCollision()
-    elseif input.KeyCode == Enum.KeyCode.F7 then
-        enableGod()
-    end
-end)
-
--- ===== BUTTONS =====
-colBtn.MouseButton1Click:Connect(toggleCollision)
-godBtn.MouseButton1Click:Connect(enableGod)
-close.MouseButton1Click:Connect(toggleUI)
-
--- ===== RESPAWN HANDLER =====
-player.CharacterAdded:Connect(function(newChar)
-    char = newChar
-    hum = char:WaitForChild("Humanoid")
-    
-    for _, c in ipairs(loops) do
-        c:Disconnect()
-    end
-    loops = {}
-    
-    if collisionOff then
-        task.wait(0.1)
-        toggleCollision()
-    end
-    if godMode then
-        task.wait(0.1)
-        enableGod()
-    end
-end)
-
-print("✦ COLLISION + GOD MODE LOADED ✦")
-print("F5 = Toggle UI")
-print("F6 = Toggle Collision (NoClip)")
-print("F7 = Toggle God Mode")
+            console.log('Reach Controller UI ready.');
+        })();
+    </script>
+</body>
+</html>
