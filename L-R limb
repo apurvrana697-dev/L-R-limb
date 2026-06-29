@@ -1,5 +1,5 @@
--- JJS ABSOLUTE INVINCIBILITY
--- Aggressive method - forces god mode
+-- JJS COLLISION TOGGLE + GOD MODE
+-- Turn player collision on/off + invincibility
 
 local player = game.Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
@@ -8,39 +8,40 @@ local uis = game:GetService("UserInputService")
 local rs = game:GetService("RunService")
 
 -- State
-local active = false
+local collisionOff = false
+local godMode = false
 local uiOpen = true
 local loops = {}
 
--- ===== MINIMAL CLEAN UI =====
+-- ===== CLEAN UI =====
 local gui = Instance.new("ScreenGui")
-gui.Name = "IFrameUI"
+gui.Name = "CollisionUI"
 gui.Parent = player.PlayerGui
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 180, 0, 120)
-frame.Position = UDim2.new(0.5, -90, 0.5, -60)
-frame.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
+frame.Size = UDim2.new(0, 200, 0, 160)
+frame.Position = UDim2.new(0.5, -100, 0.5, -80)
+frame.BackgroundColor3 = Color3.fromRGB(8, 8, 18)
 frame.BackgroundTransparency = 0.1
 frame.BorderSizePixel = 0
 frame.Parent = gui
 
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 10)
+corner.CornerRadius = UDim.new(0, 12)
 corner.Parent = frame
 
--- Glow
+-- Glow border
 local glow = Instance.new("Frame")
 glow.Size = UDim2.new(1, 4, 1, 4)
 glow.Position = UDim2.new(0, -2, 0, -2)
 glow.BackgroundTransparency = 1
 glow.BorderSizePixel = 2
-glow.BorderColor3 = Color3.fromRGB(80, 200, 255)
+glow.BorderColor3 = Color3.fromRGB(100, 200, 255)
 glow.Parent = frame
 
 local glowCorner = Instance.new("UICorner")
-glowCorner.CornerRadius = UDim.new(0, 11)
+glowCorner.CornerRadius = UDim.new(0, 13)
 glowCorner.Parent = glow
 
 -- Title
@@ -48,245 +49,237 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 30)
 title.Position = UDim2.new(0, 0, 0, 5)
 title.BackgroundTransparency = 1
-title.Text = "GOD MODE"
-title.TextColor3 = Color3.fromRGB(180, 220, 255)
+title.Text = "✦ COLLISION ✦"
+title.TextColor3 = Color3.fromRGB(150, 210, 255)
 title.TextScaled = true
 title.Font = Enum.Font.GothamBold
 title.Parent = frame
 
--- Status dot
-local dot = Instance.new("Frame")
-dot.Size = UDim2.new(0, 10, 0, 10)
-dot.Position = UDim2.new(0, 15, 0, 50)
-dot.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-dot.BorderSizePixel = 0
-dot.Parent = frame
+-- Collision Status
+local colStatus = Instance.new("TextLabel")
+colStatus.Size = UDim2.new(1, 0, 0, 20)
+colStatus.Position = UDim2.new(0, 0, 0, 35)
+colStatus.BackgroundTransparency = 1
+colStatus.Text = "COLLISION: ON"
+colStatus.TextColor3 = Color3.fromRGB(100, 255, 150)
+colStatus.TextScaled = true
+colStatus.Font = Enum.Font.Gotham
+colStatus.Parent = frame
 
-local dotCorner = Instance.new("UICorner")
-dotCorner.CornerRadius = UDim.new(1, 0)
-dotCorner.Parent = dot
+-- God Mode Status
+local godStatus = Instance.new("TextLabel")
+godStatus.Size = UDim2.new(1, 0, 0, 20)
+godStatus.Position = UDim2.new(0, 0, 0, 52)
+godStatus.BackgroundTransparency = 1
+godStatus.Text = "GOD MODE: OFF"
+godStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
+godStatus.TextScaled = true
+godStatus.Font = Enum.Font.Gotham
+godStatus.Parent = frame
 
--- Status text
-local status = Instance.new("TextLabel")
-status.Size = UDim2.new(0.7, 0, 0, 25)
-status.Position = UDim2.new(0, 30, 0, 48)
-status.BackgroundTransparency = 1
-status.Text = "OFF"
-status.TextColor3 = Color3.fromRGB(255, 100, 100)
-status.TextScaled = true
-status.Font = Enum.Font.Gotham
-status.TextXAlignment = Enum.TextXAlignment.Left
-status.Parent = frame
+-- Collision Toggle Button
+local colBtn = Instance.new("TextButton")
+colBtn.Size = UDim2.new(0.4, 0, 0, 30)
+colBtn.Position = UDim2.new(0.05, 0, 0.75, 0)
+colBtn.BackgroundColor3 = Color3.fromRGB(30, 60, 40)
+colBtn.BorderSizePixel = 0
+colBtn.Text = "NO CLIP"
+colBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+colBtn.TextScaled = true
+colBtn.Font = Enum.Font.GothamBold
+colBtn.Parent = frame
 
--- BIG TOGGLE BUTTON
-local toggleBtn = Instance.new("TextButton")
-toggleBtn.Size = UDim2.new(0.7, 0, 0, 35)
-toggleBtn.Position = UDim2.new(0.15, 0, 0.7, 0)
-toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 75)
-toggleBtn.BorderSizePixel = 0
-toggleBtn.Text = "ACTIVATE"
-toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleBtn.TextScaled = true
-toggleBtn.Font = Enum.Font.GothamBold
-toggleBtn.Parent = frame
+local colCorner = Instance.new("UICorner")
+colCorner.CornerRadius = UDim.new(0, 6)
+colCorner.Parent = colBtn
 
-local btnCorner = Instance.new("UICorner")
-btnCorner.CornerRadius = UDim.new(0, 6)
-btnCorner.Parent = toggleBtn
+-- God Mode Toggle Button
+local godBtn = Instance.new("TextButton")
+godBtn.Size = UDim2.new(0.4, 0, 0, 30)
+godBtn.Position = UDim2.new(0.55, 0, 0.75, 0)
+godBtn.BackgroundColor3 = Color3.fromRGB(60, 30, 30)
+godBtn.BorderSizePixel = 0
+godBtn.Text = "GOD"
+godBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+godBtn.TextScaled = true
+godBtn.Font = Enum.Font.GothamBold
+godBtn.Parent = frame
 
--- Close button (tiny)
-local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 20, 0, 20)
-closeBtn.Position = UDim2.new(1, -25, 0, 5)
-closeBtn.BackgroundColor3 = Color3.fromRGB(60, 40, 40)
-closeBtn.BorderSizePixel = 0
-closeBtn.Text = "✕"
-closeBtn.TextColor3 = Color3.fromRGB(200, 150, 150)
-closeBtn.TextScaled = true
-closeBtn.Font = Enum.Font.Gotham
-closeBtn.Parent = frame
+local godCorner = Instance.new("UICorner")
+godCorner.CornerRadius = UDim.new(0, 6)
+godCorner.Parent = godBtn
+
+-- Keybind hint
+local keyHint = Instance.new("TextLabel")
+keyHint.Size = UDim2.new(1, 0, 0, 15)
+keyHint.Position = UDim2.new(0, 0, 0, 1, 0)
+keyHint.BackgroundTransparency = 1
+keyHint.Text = "[ F5 = UI ] [ F6 = NoClip ] [ F7 = God ]"
+keyHint.TextColor3 = Color3.fromRGB(60, 60, 90)
+keyHint.TextScaled = true
+keyHint.Font = Enum.Font.Gotham
+keyHint.Parent = frame
+
+-- Close button
+local close = Instance.new("TextButton")
+close.Size = UDim2.new(0, 20, 0, 20)
+close.Position = UDim2.new(1, -25, 0, 5)
+close.BackgroundColor3 = Color3.fromRGB(50, 35, 35)
+close.BorderSizePixel = 0
+close.Text = "✕"
+close.TextColor3 = Color3.fromRGB(180, 130, 130)
+close.TextScaled = true
+close.Font = Enum.Font.Gotham
+close.Parent = frame
 
 local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, 4)
-closeCorner.Parent = closeBtn
+closeCorner.Parent = close
 
--- Key hint
-local key = Instance.new("TextLabel")
-key.Size = UDim2.new(0.5, 0, 0, 15)
-key.Position = UDim2.new(0.25, 0, 0.92, 0)
-key.BackgroundTransparency = 1
-key.Text = "F5"
-key.TextColor3 = Color3.fromRGB(80, 80, 100)
-key.TextScaled = true
-key.Font = Enum.Font.Gotham
-key.Parent = frame
+-- ===== COLLISION TOGGLE =====
 
--- ===== AGGRESSIVE INVINCIBILITY =====
-
-local function enableGodMode()
-    if not char then return end
+local function toggleCollision()
+    collisionOff = not collisionOff
     
-    -- EVERYTHING gets destroyed or neutralized
-    
-    -- Connection 1: MAXIMUM HEALTH LOCK
-    local c1 = rs.Heartbeat:Connect(function()
-        if hum then
-            hum.Health = 999999
-            hum.MaxHealth = 999999
-            hum:SetAttribute("LastDamageTime", -999)
-            hum:SetAttribute("DamageCooldown", -999)
-            hum:SetAttribute("HitCooldown", -999)
-            hum:SetAttribute("LastHit", -999)
-            hum.PlatformStand = false
-            hum.Sit = false
-            hum.AutoRotate = true
-        end
-        if char then
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                hrp:SetAttribute("LastDamageTime", -999)
-                hrp:SetAttribute("DamageCooldown", -999)
-                hrp:SetAttribute("HitCooldown", -999)
-            end
-        end
-    end)
-    table.insert(loops, c1)
-    
-    -- Connection 2: REMOVE ALL HITBOXES CONSTANTLY
-    local c2 = rs.Stepped:Connect(function()
-        if not char then return end
-        for _, obj in ipairs(char:GetDescendants()) do
-            -- Remove anything hitbox related
-            if obj:IsA("BasePart") then
-                obj.CanCollide = false
-                obj.Transparency = 0.8
-                -- Remove any damage attributes
-                obj:SetAttribute("Damage", nil)
-                obj:SetAttribute("Hitbox", nil)
-                obj:SetAttribute("Owner", nil)
-                obj:SetAttribute("IsHitbox", nil)
-            end
-            -- Kill any damage scripts
-            if obj:IsA("Script") or obj:IsA("LocalScript") then
-                local name = obj.Name:lower()
-                if name:find("hit") or name:find("damage") or name:find("attack") or name:find("combat") then
-                    obj:Destroy()
-                end
-            end
-            -- Remove remote events
-            if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
-                if obj.Name:lower():find("damage") or obj.Name:lower():find("hit") then
-                    obj:Destroy()
-                end
-            end
-        end
-    end)
-    table.insert(loops, c2)
-    
-    -- Connection 3: BLOCK DAMAGE FIRING
-    local c3 = rs.RenderStepped:Connect(function()
-        if hum then
-            hum.Health = hum.MaxHealth
-            hum.BreakJointsOnDeath = false
-        end
-        if char then
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
-            end
-        end
-    end)
-    table.insert(loops, c3)
-    
-    -- Connection 4: DESTROY NEW HITBOXES AS THEY APPEAR
-    local c4 = char.DescendantAdded:Connect(function(obj)
-        if obj:IsA("BasePart") then
-            obj.CanCollide = false
-            obj:SetAttribute("Damage", nil)
-            obj:SetAttribute("Hitbox", nil)
-        end
-        if obj:IsA("Script") or obj:IsA("LocalScript") then
-            local name = obj.Name:lower()
-            if name:find("hit") or name:find("damage") or name:find("attack") then
-                obj:Destroy()
-            end
-        end
-    end)
-    table.insert(loops, c4)
-end
-
-local function disableGodMode()
-    for _, c in ipairs(loops) do
-        c:Disconnect()
-    end
-    loops = {}
-    if hum then
-        hum.MaxHealth = 100
-        hum.Health = 100
-        hum.BreakJointsOnDeath = true
-    end
     if char then
         for _, part in ipairs(char:GetDescendants()) do
             if part:IsA("BasePart") then
-                part.CanCollide = true
-                part.Transparency = 0
+                part.CanCollide = not collisionOff
+                if collisionOff then
+                    part.Transparency = 0.5
+                    part.Material = Enum.Material.Neon
+                else
+                    part.Transparency = 0
+                    part.Material = Enum.Material.Plastic
+                end
             end
+        end
+    end
+    
+    if collisionOff then
+        colBtn.Text = "CLIP OFF"
+        colBtn.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
+        colStatus.Text = "COLLISION: OFF"
+        colStatus.TextColor3 = Color3.fromRGB(255, 200, 100)
+    else
+        colBtn.Text = "NO CLIP"
+        colBtn.BackgroundColor3 = Color3.fromRGB(30, 60, 40)
+        colStatus.Text = "COLLISION: ON"
+        colStatus.TextColor3 = Color3.fromRGB(100, 255, 150)
+    end
+end
+
+-- ===== GOD MODE =====
+
+local function enableGod()
+    godMode = not godMode
+    
+    if godMode then
+        godBtn.Text = "GOD ON"
+        godBtn.BackgroundColor3 = Color3.fromRGB(60, 120, 60)
+        godStatus.Text = "GOD MODE: ON"
+        godStatus.TextColor3 = Color3.fromRGB(100, 255, 150)
+        
+        -- God mode loops
+        local c1 = rs.Heartbeat:Connect(function()
+            if hum then
+                hum.Health = hum.MaxHealth
+                hum:SetAttribute("LastDamageTime", -999)
+                hum:SetAttribute("DamageCooldown", -999)
+            end
+        end)
+        table.insert(loops, c1)
+        
+        local c2 = rs.Stepped:Connect(function()
+            if char then
+                for _, obj in ipairs(char:GetDescendants()) do
+                    if obj:IsA("Script") or obj:IsA("LocalScript") then
+                        local name = obj.Name:lower()
+                        if name:find("hit") or name:find("damage") or name:find("attack") then
+                            obj:Destroy()
+                        end
+                    end
+                    if obj:IsA("BasePart") then
+                        obj.CanCollide = false
+                    end
+                end
+            end
+        end)
+        table.insert(loops, c2)
+        
+        local c3 = rs.RenderStepped:Connect(function()
+            if hum then
+                hum.Health = hum.MaxHealth
+            end
+        end)
+        table.insert(loops, c3)
+        
+    else
+        godBtn.Text = "GOD"
+        godBtn.BackgroundColor3 = Color3.fromRGB(60, 30, 30)
+        godStatus.Text = "GOD MODE: OFF"
+        godStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
+        
+        for _, c in ipairs(loops) do
+            c:Disconnect()
+        end
+        loops = {}
+        
+        if hum then
+            hum.MaxHealth = 100
+            hum.Health = 100
         end
     end
 end
 
--- ===== TOGGLES =====
-
-local function toggleGod()
-    active = not active
-    if active then
-        toggleBtn.Text = "ACTIVE ✓"
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 80)
-        dot.BackgroundColor3 = Color3.fromRGB(50, 255, 100)
-        status.Text = "ON"
-        status.TextColor3 = Color3.fromRGB(100, 255, 150)
-        enableGodMode()
-    else
-        toggleBtn.Text = "ACTIVATE"
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 75)
-        dot.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-        status.Text = "OFF"
-        status.TextColor3 = Color3.fromRGB(255, 100, 100)
-        disableGodMode()
-    end
-end
+-- ===== UI TOGGLE =====
 
 local function toggleUI()
     uiOpen = not uiOpen
     frame.Visible = uiOpen
-    closeBtn.Text = uiOpen and "✕" or "+"
-    closeBtn.BackgroundColor3 = uiOpen and Color3.fromRGB(60, 40, 40) or Color3.fromRGB(40, 60, 40)
+    close.Text = uiOpen and "✕" or "+"
+    close.BackgroundColor3 = uiOpen and Color3.fromRGB(50, 35, 35) or Color3.fromRGB(35, 50, 35)
 end
 
--- ===== INPUT =====
+-- ===== KEYBINDS =====
 uis.InputBegan:Connect(function(input, gp)
     if gp then return end
+    
     if input.KeyCode == Enum.KeyCode.F5 then
         toggleUI()
+    elseif input.KeyCode == Enum.KeyCode.F6 then
+        toggleCollision()
+    elseif input.KeyCode == Enum.KeyCode.F7 then
+        enableGod()
     end
 end)
 
 -- ===== BUTTONS =====
-toggleBtn.MouseButton1Click:Connect(toggleGod)
-closeBtn.MouseButton1Click:Connect(toggleUI)
+colBtn.MouseButton1Click:Connect(toggleCollision)
+godBtn.MouseButton1Click:Connect(enableGod)
+close.MouseButton1Click:Connect(toggleUI)
 
--- ===== RESPAWN =====
+-- ===== RESPAWN HANDLER =====
 player.CharacterAdded:Connect(function(newChar)
     char = newChar
     hum = char:WaitForChild("Humanoid")
-    for _, c in ipairs(loops) do c:Disconnect() end
+    
+    for _, c in ipairs(loops) do
+        c:Disconnect()
+    end
     loops = {}
-    if active then
-        enableGodMode()
+    
+    if collisionOff then
+        task.wait(0.1)
+        toggleCollision()
+    end
+    if godMode then
+        task.wait(0.1)
+        enableGod()
     end
 end)
 
-print("✦ GOD MODE LOADED ✦")
-print("F5 = toggle UI")
-print("Click button = invincibility")
+print("✦ COLLISION + GOD MODE LOADED ✦")
+print("F5 = Toggle UI")
+print("F6 = Toggle Collision (NoClip)")
+print("F7 = Toggle God Mode")
