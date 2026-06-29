@@ -1,73 +1,181 @@
--- JJS Roblox Reach Hack
--- Loadstring compatible script
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/your-library/source/main.lua"))() -- Replace with actual library
+-- Reach Hack Script for Roblox
+-- Works with most executors (Synapse, Krnl, ScriptWare, etc.)
+-- Credits to the community for the reach method
 
-local Window = Library:CreateWindow("Reach Hack v1.0")
-local Tab = Window:CreateTab("Main")
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+local guiEnabled = true
 
-local ReachSection = Tab:CreateSection("Reach Settings")
+-- Create the main ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ReachHackGUI"
+screenGui.Parent = player.PlayerGui
 
-local ReachSlider = ReachSection:CreateSlider({
-    Name = "Reach Distance",
-    Min = 0,
-    Max = 50,
-    Default = 10,
-    Callback = function(value)
-        _G.reachValue = value
+-- Create the main frame (draggable)
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 250, 0, 180)
+mainFrame.Position = UDim2.new(0.5, -125, 0.5, -90)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+mainFrame.BackgroundTransparency = 0.15
+mainFrame.BorderSizePixel = 1
+mainFrame.BorderColor3 = Color3.fromRGB(70, 70, 80)
+mainFrame.ClipsDescendants = true
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+-- Title label
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 30)
+titleLabel.Position = UDim2.new(0, 0, 0, 0)
+titleLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+titleLabel.BorderSizePixel = 0
+titleLabel.Text = "Reach Control"
+titleLabel.TextColor3 = Color3.fromRGB(220, 220, 230)
+titleLabel.TextSize = 18
+titleLabel.Font = Enum.Font.SourceSansBold
+titleLabel.Parent = mainFrame
+
+-- Close button (toggle visibility)
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 30, 0, 30)
+closeButton.Position = UDim2.new(1, -30, 0, 0)
+closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeButton.BorderSizePixel = 0
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.TextSize = 18
+closeButton.Font = Enum.Font.SourceSansBold
+closeButton.Parent = mainFrame
+
+-- Slider label
+local sliderLabel = Instance.new("TextLabel")
+sliderLabel.Size = UDim2.new(1, -20, 0, 20)
+sliderLabel.Position = UDim2.new(0, 10, 0, 35)
+sliderLabel.BackgroundTransparency = 1
+sliderLabel.Text = "Reach Distance: 10"
+sliderLabel.TextColor3 = Color3.fromRGB(200, 200, 210)
+sliderLabel.TextSize = 14
+sliderLabel.Font = Enum.Font.SourceSans
+sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+sliderLabel.Parent = mainFrame
+
+-- Slider
+local reachSlider = Instance.new("Slider")
+reachSlider.Size = UDim2.new(1, -20, 0, 20)
+reachSlider.Position = UDim2.new(0, 10, 0, 60)
+reachSlider.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+reachSlider.BorderSizePixel = 0
+reachSlider.MinValue = 5
+reachSlider.MaxValue = 30
+reachSlider.Value = 10
+reachSlider.Parent = mainFrame
+
+-- Update button
+local updateButton = Instance.new("TextButton")
+updateButton.Size = UDim2.new(1, -20, 0, 35)
+updateButton.Position = UDim2.new(0, 10, 0, 90)
+updateButton.BackgroundColor3 = Color3.fromRGB(60, 120, 210)
+updateButton.BorderSizePixel = 0
+updateButton.Text = "Update Reach"
+updateButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+updateButton.TextSize = 16
+updateButton.Font = Enum.Font.SourceSansBold
+updateButton.Parent = mainFrame
+
+-- Status label
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, -20, 0, 20)
+statusLabel.Position = UDim2.new(0, 10, 0, 135)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "Ready"
+statusLabel.TextColor3 = Color3.fromRGB(150, 200, 150)
+statusLabel.TextSize = 12
+statusLabel.Font = Enum.Font.SourceSans
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.Parent = mainFrame
+
+-- Toggle GUI visibility
+local guiVisible = true
+closeButton.MouseButton1Click:Connect(function()
+    guiVisible = not guiVisible
+    mainFrame.Visible = guiVisible
+    if guiVisible then
+        closeButton.Text = "X"
+    else
+        closeButton.Text = "▯"
     end
-})
+    statusLabel.Text = guiVisible and "GUI visible" or "GUI hidden (press X to show)"
+end)
 
-local UpdateButton = ReachSection:CreateButton({
-    Name = "Update Reach",
-    Callback = function()
-        local reach = _G.reachValue or 10
-        -- Apply reach modification to local player
-        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 16 -- keep normal
-        -- Custom reach function
-        local oldHit
-        oldHit = hookfunction(game.Players.LocalPlayer.Character:FindFirstChild("Humanoid").EquipTool, function(...)
-            local args = {...}
-            local tool = args[1]
-            if tool and tool:IsA("Tool") then
-                tool.Handle.Size = Vector3.new(reach, reach, reach)
+-- Update slider label
+reachSlider:GetPropertyChangedSignal("Value"):Connect(function()
+    sliderLabel.Text = "Reach Distance: " .. math.round(reachSlider.Value)
+end)
+
+-- Function to modify reach (works on many games)
+local function setReach(distance)
+    -- Method 1: Modify Character's hitbox/arm size (works in many PvP games)
+    local character = player.Character
+    if character then
+        for _, part in pairs(character:GetDescendants()) do
+            if part:IsA("Part") or part:IsA("MeshPart") then
+                -- Some games use this for reach detection
+                part.Size = part.Size + Vector3.new(0, 0, distance - 10) -- subtle adjustment
             end
-            return oldHit(...)
-        end)
-        print("Reach updated to " .. tostring(reach))
-    end
-})
-
-local CloseButton = Tab:CreateButton({
-    Name = "Close UI",
-    Callback = function()
-        Window:Destroy()
-    end
-})
-
--- Toggle close with hotkey (Ctrl + C)
-game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.KeyCode == Enum.KeyCode.C and input:IsModifierKeyDown(Enum.KeyCode.LeftControl) then
-        if Window.Enabled then
-            Window:Destroy()
-        else
-            -- Reload if needed
         end
     end
+    
+    -- Method 2: Modify tool reach if holding a tool
+    local tool = character and character:FindFirstChildOfClass("Tool")
+    if tool then
+        local handle = tool:FindFirstChild("Handle")
+        if handle then
+            -- Some tools use handle size for reach
+            handle.Size = handle.Size + Vector3.new(0, 0, distance - 10)
+        end
+    end
+    
+    -- Method 3: For games using raycast-based combat, inject custom distance
+    -- This uses the game's own reach variables if available
+    local gameReach = getgenv().Reach or 10
+    getgenv().Reach = distance
+    gameReach = distance
+    
+    statusLabel.Text = "Reach set to " .. math.round(distance) .. " (active)"
+    statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+end
+
+-- Update button action
+updateButton.MouseButton1Click:Connect(function()
+    local newReach = math.round(reachSlider.Value)
+    setReach(newReach)
+    statusLabel.Text = "Reach updated to " .. newReach
 end)
 
--- Main loop to keep reach persistent
-spawn(function()
-    while wait(0.5) do
-        pcall(function()
-            local reach = _G.reachValue or 10
-            local char = game.Players.LocalPlayer.Character
-            if char then
-                for _, v in pairs(char:GetChildren()) do
-                    if v:IsA("Tool") and v:FindFirstChild("Handle") then
-                        v.Handle.Size = Vector3.new(reach, reach, reach)
-                    end
-                end
-            end
-        end)
+-- Auto-apply on slider change (optional - uncomment if you want live updating)
+-- reachSlider:GetPropertyChangedSignal("Value"):Connect(function()
+--     setReach(math.round(reachSlider.Value))
+-- end)
+
+-- Initial setup
+statusLabel.Text = "Initialized. Set reach and click Update."
+sliderLabel.Text = "Reach Distance: " .. math.round(reachSlider.Value)
+
+-- Function to keep GUI on top and responsive
+game:GetService("RunService").Heartbeat:Connect(function()
+    -- Keep GUI active and responsive (no flicker)
+    if mainFrame and not mainFrame.Parent then
+        mainFrame.Parent = screenGui
     end
 end)
+
+-- Cleanup when character resets
+player.CharacterAdded:Connect(function(char)
+    wait(1)
+    statusLabel.Text = "Character reset - reapply reach if needed"
+    statusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+end)
+
+print("Reach Hack loaded successfully!")
+print("Use the GUI to adjust your reach distance.")
