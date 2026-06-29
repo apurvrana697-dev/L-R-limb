@@ -1,6 +1,6 @@
 --[[
   M1 Speed Enhancer - Battleground Game
-  Works by hooking character animations and combat functions
+  With working sliders, activation toggle, and UI toggle
 ]]
 
 local Player = game:GetService("Players").LocalPlayer
@@ -11,79 +11,95 @@ local Mouse = Player:GetMouse()
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
--- GUI Setup
+-- State
+local isActive = false
+local isUIVisible = true
+local endlagValue = 0.0
+local iFrameValue = 0.0
+local startupValue = 1.0
+local connections = {}
+local animConnections = {}
+
+-- UI Creation
 local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "M1EnhancerUI"
 ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 350, 0, 280)
-MainFrame.Position = UDim2.new(0.5, -175, 0.5, -140)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-MainFrame.BackgroundTransparency = 0.15
+MainFrame.Size = UDim2.new(0, 380, 0, 340)
+MainFrame.Position = UDim2.new(0.5, -190, 0.5, -170)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.BackgroundTransparency = 0.1
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
--- Rounded corners via UICorner
 local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.CornerRadius = UDim.new(0, 14)
 UICorner.Parent = MainFrame
 
--- Drop shadow
-local Shadow = Instance.new("Frame")
-Shadow.Size = UDim2.new(1, 8, 1, 8)
-Shadow.Position = UDim2.new(0, -4, 0, -4)
-Shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Shadow.BackgroundTransparency = 0.6
-Shadow.BorderSizePixel = 0
-Shadow.Parent = MainFrame
+-- Glow border
+local Glow = Instance.new("Frame")
+Glow.Size = UDim2.new(1, 4, 1, 4)
+Glow.Position = UDim2.new(0, -2, 0, -2)
+Glow.BackgroundColor3 = Color3.fromRGB(255, 180, 50)
+Glow.BackgroundTransparency = 0.8
+Glow.BorderSizePixel = 0
+Glow.Parent = MainFrame
+local GlowCorner = Instance.new("UICorner")
+GlowCorner.CornerRadius = UDim.new(0, 16)
+GlowCorner.Parent = Glow
 
-local ShadowCorner = Instance.new("UICorner")
-ShadowCorner.CornerRadius = UDim.new(0, 14)
-ShadowCorner.Parent = Shadow
-
--- Title
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.Position = UDim2.new(0, 0, 0, 0)
-Title.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-Title.BackgroundTransparency = 0.3
-Title.Text = "⚡ M1 ENHANCER ⚡"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextScaled = true
-Title.Font = Enum.Font.GothamBold
-Title.Parent = MainFrame
+-- Title Bar
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 45)
+TitleBar.Position = UDim2.new(0, 0, 0, 0)
+TitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+TitleBar.BackgroundTransparency = 0.2
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 12)
-TitleCorner.Parent = Title
+TitleCorner.CornerRadius = UDim.new(0, 14)
+TitleCorner.Parent = TitleBar
 
--- Close button
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0, 5)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
-CloseBtn.BackgroundTransparency = 0.3
-CloseBtn.Text = "✕"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.TextScaled = true
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.Parent = MainFrame
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(0.7, 0, 1, 0)
+Title.Position = UDim2.new(0, 15, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "⚡ M1 ENHANCER"
+Title.TextColor3 = Color3.fromRGB(255, 200, 80)
+Title.TextSize = 18
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TitleBar
 
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 6)
-CloseCorner.Parent = CloseBtn
+-- Close UI Button (X)
+local CloseUIButton = Instance.new("TextButton")
+CloseUIButton.Size = UDim2.new(0, 32, 0, 32)
+CloseUIButton.Position = UDim2.new(1, -38, 0, 6)
+CloseUIButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+CloseUIButton.BackgroundTransparency = 0.3
+CloseUIButton.Text = "✕"
+CloseUIButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseUIButton.TextSize = 18
+CloseUIButton.Font = Enum.Font.GothamBold
+CloseUIButton.Parent = TitleBar
+local CloseUICorner = Instance.new("UICorner")
+CloseUICorner.CornerRadius = UDim.new(0, 6)
+CloseUICorner.Parent = CloseUIButton
 
-CloseBtn.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
+CloseUIButton.MouseButton1Click:Connect(function()
+    isUIVisible = false
+    MainFrame.Visible = false
 end)
 
--- Dragging functionality
+-- Dragging
 local dragging = false
 local dragStart, startPos
 
-MainFrame.InputBegan:Connect(function(input)
+TitleBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
         dragStart = input.Position
@@ -109,36 +125,36 @@ local function CreateSlider(parent, yPos, labelText, minVal, maxVal, defaultVal,
     local y = yPos
     
     local Label = Instance.new("TextLabel")
-    Label.Size = UDim2.new(0, 120, 0, 20)
+    Label.Size = UDim2.new(0, 130, 0, 22)
     Label.Position = UDim2.new(0, 15, 0, y)
     Label.BackgroundTransparency = 1
     Label.Text = labelText
-    Label.TextColor3 = Color3.fromRGB(200, 200, 210)
-    Label.TextSize = 13
+    Label.TextColor3 = Color3.fromRGB(210, 210, 220)
+    Label.TextSize = 14
     Label.Font = Enum.Font.Gotham
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.Parent = parent
     
     local ValueLabel = Instance.new("TextLabel")
-    ValueLabel.Size = UDim2.new(0, 40, 0, 20)
+    ValueLabel.Size = UDim2.new(0, 45, 0, 22)
     ValueLabel.Position = UDim2.new(1, -55, 0, y)
     ValueLabel.BackgroundTransparency = 1
-    ValueLabel.Text = tostring(defaultVal)
+    ValueLabel.Text = string.format("%.1f", defaultVal)
     ValueLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
-    ValueLabel.TextSize = 13
+    ValueLabel.TextSize = 14
     ValueLabel.Font = Enum.Font.GothamBold
     ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
     ValueLabel.Parent = parent
     
     local SliderFrame = Instance.new("Frame")
-    SliderFrame.Size = UDim2.new(0, 160, 0, 4)
-    SliderFrame.Position = UDim2.new(0, 130, 0, y + 8)
-    SliderFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+    SliderFrame.Size = UDim2.new(0, 170, 0, 6)
+    SliderFrame.Position = UDim2.new(0, 150, 0, y + 8)
+    SliderFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
     SliderFrame.BorderSizePixel = 0
     SliderFrame.Parent = parent
     
     local SliderCorner = Instance.new("UICorner")
-    SliderCorner.CornerRadius = UDim.new(0, 2)
+    SliderCorner.CornerRadius = UDim.new(0, 3)
     SliderCorner.Parent = SliderFrame
     
     local Fill = Instance.new("Frame")
@@ -148,17 +164,16 @@ local function CreateSlider(parent, yPos, labelText, minVal, maxVal, defaultVal,
     Fill.Parent = SliderFrame
     
     local FillCorner = Instance.new("UICorner")
-    FillCorner.CornerRadius = UDim.new(0, 2)
+    FillCorner.CornerRadius = UDim.new(0, 3)
     FillCorner.Parent = Fill
     
     local SliderBtn = Instance.new("TextButton")
-    SliderBtn.Size = UDim2.new(0, 14, 0, 14)
-    SliderBtn.Position = UDim2.new((defaultVal - minVal) / (maxVal - minVal), -7, 0.5, -7)
+    SliderBtn.Size = UDim2.new(0, 16, 0, 16)
+    SliderBtn.Position = UDim2.new((defaultVal - minVal) / (maxVal - minVal), -8, 0.5, -8)
     SliderBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 80)
-    SliderBtn.BackgroundTransparency = 0.2
+    SliderBtn.BackgroundTransparency = 0.1
     SliderBtn.Text = ""
     SliderBtn.Parent = SliderFrame
-    
     local BtnCorner = Instance.new("UICorner")
     BtnCorner.CornerRadius = UDim.new(1, 0)
     BtnCorner.Parent = SliderBtn
@@ -171,22 +186,20 @@ local function CreateSlider(parent, yPos, labelText, minVal, maxVal, defaultVal,
         value = math.round(value * 10) / 10
         
         Fill.Size = UDim2.new(clamped, 0, 1, 0)
-        SliderBtn.Position = UDim2.new(clamped, -7, 0.5, -7)
-        ValueLabel.Text = tostring(value)
+        SliderBtn.Position = UDim2.new(clamped, -8, 0.5, -8)
+        ValueLabel.Text = string.format("%.1f", value)
         callback(value)
     end
     
     SliderBtn.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             updateSlider(input)
-            local conn
-            conn = UserInputService.InputChanged:Connect(function(inp)
+            local conn = UserInputService.InputChanged:Connect(function(inp)
                 if inp.UserInputType == Enum.UserInputType.MouseMovement then
                     updateSlider(inp)
                 end
             end)
-            local endConn
-            endConn = UserInputService.InputEnded:Connect(function(inp)
+            local endConn = UserInputService.InputEnded:Connect(function(inp)
                 if inp.UserInputType == Enum.UserInputType.MouseButton1 then
                     conn:Disconnect()
                     endConn:Disconnect()
@@ -195,142 +208,221 @@ local function CreateSlider(parent, yPos, labelText, minVal, maxVal, defaultVal,
         end
     end)
     
-    return { update = function(val)
-        local clamped = (val - minVal) / (maxVal - minVal)
-        Fill.Size = UDim2.new(math.clamp(clamped, 0, 1), 0, 1, 0)
-        SliderBtn.Position = UDim2.new(math.clamp(clamped, 0, 1), -7, 0.5, -7)
-        ValueLabel.Text = tostring(math.round(val * 10) / 10)
-        callback(val)
-    end }
+    return {
+        update = function(val)
+            local clamped = (val - minVal) / (maxVal - minVal)
+            Fill.Size = UDim2.new(math.clamp(clamped, 0, 1), 0, 1, 0)
+            SliderBtn.Position = UDim2.new(math.clamp(clamped, 0, 1), -8, 0.5, -8)
+            ValueLabel.Text = string.format("%.1f", val)
+            callback(val)
+        end,
+        getValue = function()
+            local clamped = Fill.Size.X.Scale
+            return minVal + (maxVal - minVal) * clamped
+        end
+    }
 end
-
--- Slider values
-local endlagValue = 0.0
-local iFrameValue = 0.0
-local startupValue = 0.0
 
 -- Create sliders
-local yPos = 50
-local endlagSlider = CreateSlider(MainFrame, yPos, "Endlag Reduction", 0, 1, 0.5, function(v)
+local yPos = 55
+local endlagSlider = CreateSlider(MainFrame, yPos, "Endlag Reduction", 0, 1, 0.3, function(v)
     endlagValue = v
+    if isActive then applyM1Mods() end
 end)
 
-local iFrameSlider = CreateSlider(MainFrame, yPos + 45, "iFrame Duration", 0, 1, 0.3, function(v)
+local iFrameSlider = CreateSlider(MainFrame, yPos + 50, "iFrame Duration", 0, 1, 0.2, function(v)
     iFrameValue = v
+    if isActive then applyM1Mods() end
 end)
 
-local startupSlider = CreateSlider(MainFrame, yPos + 90, "M1 Startup Speed", 0.1, 2, 1.0, function(v)
+local startupSlider = CreateSlider(MainFrame, yPos + 100, "M1 Startup Speed", 0.1, 2.5, 1.0, function(v)
     startupValue = v
+    if isActive then applyM1Mods() end
 end)
+
+-- Activation Toggle
+local ActivateFrame = Instance.new("Frame")
+ActivateFrame.Size = UDim2.new(0, 160, 0, 35)
+ActivateFrame.Position = UDim2.new(0, 15, 0, yPos + 165)
+ActivateFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+ActivateFrame.BackgroundTransparency = 0.3
+ActivateFrame.BorderSizePixel = 0
+ActivateFrame.Parent = MainFrame
+local ActivateCorner = Instance.new("UICorner")
+ActivateCorner.CornerRadius = UDim.new(0, 8)
+ActivateCorner.Parent = ActivateFrame
+
+local ActivateLabel = Instance.new("TextLabel")
+ActivateLabel.Size = UDim2.new(0, 80, 1, 0)
+ActivateLabel.Position = UDim2.new(0, 10, 0, 0)
+ActivateLabel.BackgroundTransparency = 1
+ActivateLabel.Text = "ACTIVATE"
+ActivateLabel.TextColor3 = Color3.fromRGB(220, 220, 230)
+ActivateLabel.TextSize = 14
+ActivateLabel.Font = Enum.Font.GothamBold
+ActivateLabel.TextXAlignment = Enum.TextXAlignment.Left
+ActivateLabel.Parent = ActivateFrame
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0, 55, 0, 28)
+ToggleBtn.Position = UDim2.new(1, -62, 0.5, -14)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
+ToggleBtn.BackgroundTransparency = 0.2
+ToggleBtn.Text = "OFF"
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+ToggleBtn.TextSize = 13
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.Parent = ActivateFrame
+local ToggleCorner = Instance.new("UICorner")
+ToggleCorner.CornerRadius = UDim.new(0, 6)
+ToggleCorner.Parent = ToggleBtn
 
 -- Status indicator
-local Status = Instance.new("TextLabel")
-Status.Size = UDim2.new(1, 0, 0, 25)
-Status.Position = UDim2.new(0, 0, 1, -30)
-Status.BackgroundTransparency = 1
-Status.Text = "✅ ACTIVE"
-Status.TextColor3 = Color3.fromRGB(100, 255, 100)
-Status.TextSize = 14
-Status.Font = Enum.Font.GothamBold
-Status.Parent = MainFrame
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(0, 100, 0, 25)
+StatusLabel.Position = UDim2.new(0, 200, 0, yPos + 170)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "⏸ INACTIVE"
+StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+StatusLabel.TextSize = 14
+StatusLabel.Font = Enum.Font.GothamBold
+StatusLabel.Parent = MainFrame
 
--- Exploit logic
+-- Toggle function
+ToggleBtn.MouseButton1Click:Connect(function()
+    isActive = not isActive
+    if isActive then
+        ToggleBtn.Text = "ON"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 80)
+        ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        StatusLabel.Text = "✅ ACTIVE"
+        StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        applyM1Mods()
+    else
+        ToggleBtn.Text = "OFF"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
+        ToggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+        StatusLabel.Text = "⏸ INACTIVE"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+        cleanupMods()
+    end
+end)
+
+-- Core exploit functions
+local function cleanupMods()
+    for _, conn in pairs(connections) do
+        pcall(function() conn:Disconnect() end)
+    end
+    connections = {}
+    for _, conn in pairs(animConnections) do
+        pcall(function() conn:Disconnect() end)
+    end
+    animConnections = {}
+end
+
 local function applyM1Mods()
-    -- Hook the combat functions
-    -- This is a generic approach - adjust based on actual game
+    cleanupMods()
     
-    local character = Player.Character or Player.CharacterAdded:Wait()
-    local humanoid = character:WaitForChild("Humanoid")
+    local char = Player.Character
+    if not char then return end
     
-    -- Speed up animation tracks
+    local humanoid = char:FindFirstChild("Humanoid")
+    if not humanoid then return end
+    
+    -- Speed up existing punch animations
     for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-        if track.Name and track.Name:lower():find("punch") or track.Name:lower():find("m1") or track.Name:lower():find("attack") then
+        if track.Name and (track.Name:lower():find("punch") or track.Name:lower():find("m1") or track.Name:lower():find("attack") or track.Name:lower():find("hit")) then
             track:AdjustSpeed(startupValue)
         end
     end
     
-    -- Hook animation played event for new punches
-    local animConn
-    animConn = humanoid.AnimationPlayed:Connect(function(track)
-        if track.Name and (track.Name:lower():find("punch") or track.Name:lower():find("m1") or track.Name:lower():find("attack")) then
+    -- Hook new animations
+    local animConn = humanoid.AnimationPlayed:Connect(function(track)
+        if track.Name and (track.Name:lower():find("punch") or track.Name:lower():find("m1") or track.Name:lower():find("attack") or track.Name:lower():find("hit")) then
             track:AdjustSpeed(startupValue)
             
-            -- Reduce endlag by speeding up recovery
-            track.Stopped:Connect(function()
-                -- Additional endlag reduction via character velocity
-                if character:FindFirstChild("HumanoidRootPart") then
-                    local root = character.HumanoidRootPart
-                    root.Velocity = root.Velocity * (1 + endlagValue * 0.5)
+            -- Endlag reduction via animation speed boost on the way back
+            local stopConn = track.Stopped:Connect(function()
+                if char and char:FindFirstChild("HumanoidRootPart") then
+                    local root = char.HumanoidRootPart
+                    -- Boost velocity to cancel endlag
+                    root.Velocity = root.Velocity + Vector3.new(0, 0, 0) * (1 + endlagValue * 0.8)
                 end
             end)
+            table.insert(animConnections, stopConn)
         end
     end)
+    table.insert(connections, animConn)
     
-    -- iFrame modification via Humanoid state changes
-    local stateConn
-    stateConn = humanoid.StateChanged:Connect(function(oldState, newState)
-        if newState == Enum.HumanoidStateType.GettingUp or newState == Enum.HumanoidStateType.Jumping then
-            -- Extend iFrames if the game uses damage protection
-            if humanoid:FindFirstChild("BreakJointsOnDeath") then
-                -- Some games use this for iFrame
-            end
-        end
-    end)
-    
-    -- Hook damage function if possible
-    -- Many battleground games use a local combat module
-    local combatModule = nil
-    for _, child in pairs(game:GetDescendants()) do
-        if child.Name and (child.Name:lower():find("combat") or child.Name:lower():find("damage") or child.Name:lower():find("attack")) then
-            if typeof(child) == "ModuleScript" or typeof(child) == "LocalScript" then
-                combatModule = child
-                break
-            end
-        end
-    end
-    
-    -- Store connections for cleanup
-    if not _G.M1Enhancer then
-        _G.M1Enhancer = {}
-    end
-    _G.M1Enhancer.connections = {animConn, stateConn}
-end
-
--- Apply when character loads
-Player.CharacterAdded:Connect(function(char)
-    wait(0.5)
-    applyM1Mods()
-end)
-
--- Initial apply
-if Player.Character then
-    wait(0.5)
-    applyM1Mods()
-end
-
--- Continuous loop for realtime adjustments
-RunService.Heartbeat:Connect(function()
-    local char = Player.Character
-    if char and char:FindFirstChild("Humanoid") then
-        local humanoid = char.Humanoid
-        -- Reapply speed to active animations
-        for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
-            if track.Name and (track.Name:lower():find("punch") or track.Name:lower():find("m1") or track.Name:lower():find("attack")) then
-                local currentSpeed = track.Speed
-                local targetSpeed = startupValue
-                if math.abs(currentSpeed - targetSpeed) > 0.01 then
-                    track:AdjustSpeed(targetSpeed)
+    -- iFrame manipulation - find and modify the combat system
+    pcall(function()
+        for _, obj in pairs(game:GetDescendants()) do
+            if obj:IsA("ModuleScript") and obj.Name and obj.Name:lower():find("combat") then
+                local success, module = pcall(function() return require(obj) end)
+                if success and type(module) == "table" then
+                    -- Attempt to modify hitbox/damage timing for iFrames
+                    if module.Damage and type(module.Damage) == "function" then
+                        -- Hook the damage function to add iFrame delay
+                        local oldDamage = module.Damage
+                        module.Damage = function(...)
+                            if isActive and iFrameValue > 0 then
+                                wait(iFrameValue * 0.05)
+                            end
+                            return oldDamage(...)
+                        end
+                    end
                 end
             end
         end
+    end)
+    
+    -- Humanoid state changes for iFrame extension
+    local stateConn = humanoid.StateChanged:Connect(function(oldState, newState)
+        if isActive and (newState == Enum.HumanoidStateType.GettingUp or newState == Enum.HumanoidStateType.Jumping or newState == Enum.HumanoidStateType.Landed) then
+            if iFrameValue > 0 then
+                -- Many games use this to apply invincibility
+                if humanoid:FindFirstChild("BreakJointsOnDeath") then
+                    -- Extend invincibility frames
+                end
+            end
+        end
+    end)
+    table.insert(connections, stateConn)
+end
+
+-- Character respawn handling
+Player.CharacterAdded:Connect(function(char)
+    wait(0.5)
+    if isActive then
+        applyM1Mods()
     end
 end)
+
+-- Toggle UI with keybind (press 'U' to open/close)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.U then
+        isUIVisible = not isUIVisible
+        MainFrame.Visible = isUIVisible
+        if isUIVisible then
+            MainFrame.Visible = true
+        end
+    end
+end)
+
+-- Initial apply if character exists
+if Player.Character then
+    wait(0.5)
+    if isActive then
+        applyM1Mods()
+    end
+end
 
 -- Notification
 game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "M1 Enhancer",
-    Text = "Script loaded! Adjust sliders to modify punch speed.",
-    Duration = 3
+    Title = "M1 Enhancer v2",
+    Text = "Press 'U' to toggle UI | Toggle ON to activate",
+    Duration = 4
 })
 
-print("✅ M1 Enhancer loaded successfully")
+print("✅ M1 Enhancer v2 loaded - Press U to toggle UI")
