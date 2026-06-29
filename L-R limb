@@ -1,385 +1,73 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reach Controller</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            user-select: none;
-        }
-        body {
-            background: #0b0e17;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-        }
-        /* Main UI Panel */
-        .panel {
-            background: linear-gradient(145deg, #141a26, #1e2535);
-            border-radius: 28px;
-            padding: 30px 34px;
-            width: 380px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
-            backdrop-filter: blur(4px);
-            transition: all 0.25s ease;
-            position: relative;
-        }
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-        .panel-header h2 {
-            color: #f0f4ff;
-            font-weight: 500;
-            font-size: 22px;
-            letter-spacing: 0.5px;
-            background: linear-gradient(135deg, #b7c9ff, #7b9cff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .toggle-btn {
-            background: rgba(255, 255, 255, 0.06);
-            border: none;
-            color: #bcc9f0;
-            font-size: 26px;
-            width: 48px;
-            height: 48px;
-            border-radius: 40px;
-            cursor: pointer;
-            transition: 0.2s;
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .toggle-btn:hover {
-            background: rgba(255, 255, 255, 0.12);
-            color: white;
-            transform: scale(1.02);
-        }
-        /* slider section */
-        .slider-section {
-            margin: 18px 0 22px;
-        }
-        .slider-label {
-            display: flex;
-            justify-content: space-between;
-            color: #a8bae0;
-            font-size: 15px;
-            font-weight: 400;
-            margin-bottom: 8px;
-        }
-        .slider-label span:first-child {
-            color: #d0ddff;
-        }
-        .slider-value {
-            background: #0b0f19;
-            padding: 4px 16px;
-            border-radius: 40px;
-            font-weight: 600;
-            color: #96b0ff;
-            font-size: 15px;
-            border: 1px solid #2d3850;
-        }
-        input[type="range"] {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 100%;
-            height: 8px;
-            border-radius: 12px;
-            background: linear-gradient(90deg, #1f2a40, #3d507a);
-            outline: none;
-            transition: background 0.2s;
-        }
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 30% 30%, #6e8eff, #3f62d6);
-            cursor: pointer;
-            box-shadow: 0 0 20px #3f62d6aa, 0 0 4px #88a2ff;
-            border: 2px solid #b5cbff;
-            transition: 0.15s;
-        }
-        input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.12);
-            background: radial-gradient(circle at 30% 30%, #88a2ff, #4f72e6);
-        }
-        input[type="range"]::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #4f72e6;
-            cursor: pointer;
-            border: 2px solid #b5cbff;
-        }
-        .update-btn {
-            background: linear-gradient(135deg, #3f62d6, #2847b0);
-            border: none;
-            color: white;
-            font-weight: 600;
-            font-size: 17px;
-            padding: 14px 0;
-            width: 100%;
-            border-radius: 60px;
-            cursor: pointer;
-            transition: 0.2s;
-            box-shadow: 0 8px 24px #1b2f7a55;
-            letter-spacing: 0.3px;
-            border: 1px solid #6b87f0;
-            margin-top: 8px;
-        }
-        .update-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 32px #1f3288aa;
-            background: linear-gradient(135deg, #5373f0, #2f4fc0);
-        }
-        .update-btn:active {
-            transform: scale(0.97);
-            box-shadow: 0 4px 16px #14266e;
-        }
-        .status-line {
-            display: flex;
-            justify-content: space-between;
-            color: #7d92c0;
-            font-size: 13px;
-            margin-top: 18px;
-            padding-top: 14px;
-            border-top: 1px solid #222d47;
-        }
-        .status-line span:last-child {
-            color: #7dffb3;
-            font-weight: 400;
-        }
-        .hidden-panel {
-            display: none !important;
-        }
-        /* toggle indicator */
-        .toggle-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 10px;
-            background: #5bff8a;
-            margin-right: 10px;
-            box-shadow: 0 0 12px #00ff6a;
-        }
-        .footer-note {
-            color: #4d5f85;
-            font-size: 11px;
-            text-align: center;
-            margin-top: 16px;
-            letter-spacing: 0.3px;
-        }
-        /* close button x */
-        .close-icon {
-            font-size: 24px;
-            line-height: 1;
-        }
-    </style>
-</head>
-<body>
-    <div class="panel" id="mainPanel">
-        <!-- Header with toggle close -->
-        <div class="panel-header">
-            <h2>⚡ Reach Control</h2>
-            <button class="toggle-btn" id="togglePanelBtn" aria-label="Toggle panel visibility">
-                <span class="close-icon">✕</span>
-            </button>
-        </div>
+-- JJS Roblox Reach Hack
+-- Loadstring compatible script
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/apurvrana697-dev/L-R-limb/refs/heads/main/L-R%20limb"))() -- Replace with actual library
 
-        <!-- Slider area -->
-        <div class="slider-section">
-            <div class="slider-label">
-                <span>Reach distance</span>
-                <span class="slider-value" id="reachValueDisplay">10.0</span>
-            </div>
-            <input type="range" id="reachSlider" min="0" max="30" step="0.5" value="10.0">
-        </div>
+local Window = Library:CreateWindow("Reach Hack v1.0")
+local Tab = Window:CreateTab("Main")
 
-        <!-- Update button -->
-        <button class="update-btn" id="updateReachBtn">↻ Update Reach</button>
+local ReachSection = Tab:CreateSection("Reach Settings")
 
-        <!-- status -->
-        <div class="status-line">
-            <span><span class="toggle-indicator"></span> Active</span>
-            <span id="currentReachStatus">Reach: 10.0</span>
-        </div>
-        <div class="footer-note">slider value updates on button click</div>
-    </div>
+local ReachSlider = ReachSection:CreateSlider({
+    Name = "Reach Distance",
+    Min = 0,
+    Max = 50,
+    Default = 10,
+    Callback = function(value)
+        _G.reachValue = value
+    end
+})
 
-    <script>
-        (function() {
-            "use strict";
+local UpdateButton = ReachSection:CreateButton({
+    Name = "Update Reach",
+    Callback = function()
+        local reach = _G.reachValue or 10
+        -- Apply reach modification to local player
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 16 -- keep normal
+        -- Custom reach function
+        local oldHit
+        oldHit = hookfunction(game.Players.LocalPlayer.Character:FindFirstChild("Humanoid").EquipTool, function(...)
+            local args = {...}
+            local tool = args[1]
+            if tool and tool:IsA("Tool") then
+                tool.Handle.Size = Vector3.new(reach, reach, reach)
+            end
+            return oldHit(...)
+        end)
+        print("Reach updated to " .. tostring(reach))
+    end
+})
 
-            // DOM elements
-            const panel = document.getElementById('mainPanel');
-            const toggleBtn = document.getElementById('togglePanelBtn');
-            const reachSlider = document.getElementById('reachSlider');
-            const reachValueDisplay = document.getElementById('reachValueDisplay');
-            const updateBtn = document.getElementById('updateReachBtn');
-            const currentReachStatus = document.getElementById('currentReachStatus');
+local CloseButton = Tab:CreateButton({
+    Name = "Close UI",
+    Callback = function()
+        Window:Destroy()
+    end
+})
 
-            // track panel visibility (true = visible)
-            let isPanelVisible = true;
+-- Toggle close with hotkey (Ctrl + C)
+game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.C and input:IsModifierKeyDown(Enum.KeyCode.LeftControl) then
+        if Window.Enabled then
+            Window:Destroy()
+        else
+            -- Reload if needed
+        end
+    end
+end)
 
-            // --- Helper: update display & status ---
-            function updateReachDisplay(value) {
-                const num = parseFloat(value);
-                if (!isNaN(num)) {
-                    const formatted = num.toFixed(1);
-                    reachValueDisplay.textContent = formatted;
-                    currentReachStatus.textContent = `Reach: ${formatted}`;
-                }
-            }
-
-            // --- Slider input event (live update display) ---
-            reachSlider.addEventListener('input', function(e) {
-                const val = e.target.value;
-                updateReachDisplay(val);
-                // The slider value is shown live, but reach only updates on button click.
-            });
-
-            // --- Update button: applies the current slider value as "reach" ---
-            function applyReachUpdate() {
-                const currentVal = reachSlider.value;
-                const num = parseFloat(currentVal);
-                if (!isNaN(num)) {
-                    const formatted = num.toFixed(1);
-                    // In a real Roblox script, you'd call the game's remote or modify the character.
-                    // Here we just update the status and show a temporary visual feedback.
-                    currentReachStatus.textContent = `Reach: ${formatted} (updated)`;
-                    // Flash feedback on button
-                    updateBtn.style.transform = 'scale(0.96)';
-                    setTimeout(() => {
-                        updateBtn.style.transform = '';
-                    }, 120);
-                    // Also update the display to be consistent
-                    reachValueDisplay.textContent = formatted;
-                    // subtle console log for demonstration (not needed in final)
-                    console.log(`[Reach] Set to ${formatted}`);
-                } else {
-                    currentReachStatus.textContent = `Reach: invalid`;
-                }
-            }
-
-            updateBtn.addEventListener('click', applyReachUpdate);
-
-            // --- Toggle panel visibility (close / open) ---
-            function togglePanel() {
-                if (isPanelVisible) {
-                    // Hide panel
-                    panel.classList.add('hidden-panel');
-                    toggleBtn.innerHTML = '<span style="font-size:26px;">◉</span>'; // open indicator
-                    toggleBtn.setAttribute('aria-label', 'Open panel');
-                    isPanelVisible = false;
-                } else {
-                    // Show panel
-                    panel.classList.remove('hidden-panel');
-                    toggleBtn.innerHTML = '<span class="close-icon">✕</span>';
-                    toggleBtn.setAttribute('aria-label', 'Close panel');
-                    isPanelVisible = true;
-                }
-            }
-
-            toggleBtn.addEventListener('click', togglePanel);
-
-            // --- extra: also close if user clicks outside? (optional, not needed) ---
-            // initialize status
-            updateReachDisplay(reachSlider.value);
-
-            // ensure that if the panel is toggled hidden, we can still toggle it back using the button
-            // (the button is always visible because it's inside the panel, but when panel is hidden,
-            //  we need a way to reopen. In this design, the panel disappears completely.
-            //  We'll add a small floating reopen button if panel is hidden? 
-            //  For better UX, we create a small fixed reopen button when hidden.
-            //  Let's add it dynamically.
-
-            // Create a floating reopen button (hidden by default)
-            const reopenBtn = document.createElement('button');
-            reopenBtn.id = 'reopenPanelBtn';
-            reopenBtn.innerHTML = '⚡';
-            Object.assign(reopenBtn.style, {
-                position: 'fixed',
-                bottom: '30px',
-                right: '30px',
-                width: '60px',
-                height: '60px',
-                borderRadius: '60px',
-                background: 'linear-gradient(135deg, #3f62d6, #2847b0)',
-                border: 'none',
-                color: 'white',
-                fontSize: '32px',
-                boxShadow: '0 8px 32px #1b2f7a99',
-                cursor: 'pointer',
-                zIndex: '9999',
-                display: 'none',
-                transition: '0.2s',
-                border: '1px solid #6b87f0',
-                backdropFilter: 'blur(4px)'
-            });
-            reopenBtn.addEventListener('mouseenter', () => {
-                reopenBtn.style.transform = 'scale(1.08)';
-            });
-            reopenBtn.addEventListener('mouseleave', () => {
-                reopenBtn.style.transform = 'scale(1)';
-            });
-            document.body.appendChild(reopenBtn);
-
-            // modify toggle function to also show/hide reopen button
-            const originalToggle = togglePanel;
-            togglePanel = function() {
-                originalToggle();
-                if (isPanelVisible) {
-                    reopenBtn.style.display = 'none';
-                } else {
-                    reopenBtn.style.display = 'flex';
-                    reopenBtn.style.alignItems = 'center';
-                    reopenBtn.style.justifyContent = 'center';
-                }
-            };
-
-            // reopen button event
-            reopenBtn.addEventListener('click', function() {
-                if (!isPanelVisible) {
-                    togglePanel();
-                }
-            });
-
-            // override the toggleBtn click to use new togglePanel
-            toggleBtn.removeEventListener('click', togglePanel);
-            toggleBtn.addEventListener('click', togglePanel);
-
-            // also if panel is hidden by default? no, it starts visible.
-            // ensure reopen is hidden at start
-            reopenBtn.style.display = 'none';
-
-            // set initial reach status
-            currentReachStatus.textContent = `Reach: ${parseFloat(reachSlider.value).toFixed(1)}`;
-
-            // keyboard shortcut: Escape to toggle? optional
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    if (isPanelVisible) {
-                        togglePanel();
-                    }
-                }
-            });
-
-            console.log('Reach Controller UI ready.');
-        })();
-    </script>
-</body>
-</html>
+-- Main loop to keep reach persistent
+spawn(function()
+    while wait(0.5) do
+        pcall(function()
+            local reach = _G.reachValue or 10
+            local char = game.Players.LocalPlayer.Character
+            if char then
+                for _, v in pairs(char:GetChildren()) do
+                    if v:IsA("Tool") and v:FindFirstChild("Handle") then
+                        v.Handle.Size = Vector3.new(reach, reach, reach)
+                    end
+                end
+            end
+        end)
+    end
+end)
