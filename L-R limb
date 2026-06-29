@@ -1,6 +1,6 @@
 -- JJS Roblox Reach Hack
 -- Loadstring compatible script
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/apurvrana697-dev/L-R-limb/refs/heads/main/L-R%20limb"))() -- Replace with actual library
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/your-library/source/main.lua"))() -- Replace with actual library
 
 local Window = Library:CreateWindow("Reach Hack v1.0")
 local Tab = Window:CreateTab("Main")
