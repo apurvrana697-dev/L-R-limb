@@ -1,253 +1,292 @@
--- JJS True Infinite I-Frames Script
--- Makes you completely invulnerable - cannot be hit at all
+-- JJS ABSOLUTE INVINCIBILITY
+-- Aggressive method - forces god mode
 
 local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
+local char = player.Character or player.CharacterAdded:Wait()
+local hum = char:WaitForChild("Humanoid")
+local uis = game:GetService("UserInputService")
+local rs = game:GetService("RunService")
 
--- Variables
-local iframesEnabled = false
-local uiVisible = true
-local iframeConnections = {}
-local originalHumanoid = {}
+-- State
+local active = false
+local uiOpen = true
+local loops = {}
 
--- Create ScreenGui
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "IFrameUI"
-screenGui.Parent = player.PlayerGui
+-- ===== MINIMAL CLEAN UI =====
+local gui = Instance.new("ScreenGui")
+gui.Name = "IFrameUI"
+gui.Parent = player.PlayerGui
+gui.ResetOnSpawn = false
 
--- Main Frame
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 280, 0, 200)
-mainFrame.Position = UDim2.new(0.5, -140, 0.5, -100)
-mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-mainFrame.BackgroundTransparency = 0.15
-mainFrame.BorderSizePixel = 2
-mainFrame.BorderColor3 = Color3.fromRGB(0, 200, 255)
-mainFrame.ClipsDescendants = true
-mainFrame.Parent = screenGui
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 180, 0, 120)
+frame.Position = UDim2.new(0.5, -90, 0.5, -60)
+frame.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
+frame.BackgroundTransparency = 0.1
+frame.BorderSizePixel = 0
+frame.Parent = gui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 10)
+corner.Parent = frame
+
+-- Glow
+local glow = Instance.new("Frame")
+glow.Size = UDim2.new(1, 4, 1, 4)
+glow.Position = UDim2.new(0, -2, 0, -2)
+glow.BackgroundTransparency = 1
+glow.BorderSizePixel = 2
+glow.BorderColor3 = Color3.fromRGB(80, 200, 255)
+glow.Parent = frame
+
+local glowCorner = Instance.new("UICorner")
+glowCorner.CornerRadius = UDim.new(0, 11)
+glowCorner.Parent = glow
 
 -- Title
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 35)
-titleLabel.Position = UDim2.new(0, 0, 0, 0)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "JJS TRUE I-FRAMES"
-titleLabel.TextColor3 = Color3.fromRGB(0, 200, 255)
-titleLabel.TextScaled = true
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.Parent = mainFrame
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.Position = UDim2.new(0, 0, 0, 5)
+title.BackgroundTransparency = 1
+title.Text = "GOD MODE"
+title.TextColor3 = Color3.fromRGB(180, 220, 255)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+title.Parent = frame
 
--- I-Frame Toggle Button
-local iframeButton = Instance.new("TextButton")
-iframeButton.Size = UDim2.new(0.8, 0, 0, 45)
-iframeButton.Position = UDim2.new(0.1, 0, 0.25, 0)
-iframeButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-iframeButton.BorderSizePixel = 1
-iframeButton.BorderColor3 = Color3.fromRGB(150, 150, 200)
-iframeButton.Text = "I-FRAMES: OFF"
-iframeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-iframeButton.TextScaled = true
-iframeButton.Font = Enum.Font.Gotham
-iframeButton.Parent = mainFrame
+-- Status dot
+local dot = Instance.new("Frame")
+dot.Size = UDim2.new(0, 10, 0, 10)
+dot.Position = UDim2.new(0, 15, 0, 50)
+dot.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+dot.BorderSizePixel = 0
+dot.Parent = frame
 
--- UI Toggle Button
-local toggleUIButton = Instance.new("TextButton")
-toggleUIButton.Size = UDim2.new(0.3, 0, 0, 30)
-toggleUIButton.Position = UDim2.new(0.35, 0, 0.8, 0)
-toggleUIButton.BackgroundColor3 = Color3.fromRGB(80, 50, 50)
-toggleUIButton.BorderSizePixel = 1
-toggleUIButton.BorderColor3 = Color3.fromRGB(200, 100, 100)
-toggleUIButton.Text = "HIDE UI"
-toggleUIButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleUIButton.TextScaled = true
-toggleUIButton.Font = Enum.Font.Gotham
-toggleUIButton.Parent = mainFrame
+local dotCorner = Instance.new("UICorner")
+dotCorner.CornerRadius = UDim.new(1, 0)
+dotCorner.Parent = dot
 
--- Status Label
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Size = UDim2.new(1, 0, 0, 25)
-statusLabel.Position = UDim2.new(0, 0, 0.7, 0)
-statusLabel.BackgroundTransparency = 1
-statusLabel.Text = "Status: Disabled"
-statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-statusLabel.TextScaled = true
-statusLabel.Font = Enum.Font.Gotham
-statusLabel.Parent = mainFrame
+-- Status text
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(0.7, 0, 0, 25)
+status.Position = UDim2.new(0, 30, 0, 48)
+status.BackgroundTransparency = 1
+status.Text = "OFF"
+status.TextColor3 = Color3.fromRGB(255, 100, 100)
+status.TextScaled = true
+status.Font = Enum.Font.Gotham
+status.TextXAlignment = Enum.TextXAlignment.Left
+status.Parent = frame
 
--- Info Label
-local infoLabel = Instance.new("TextLabel")
-infoLabel.Size = UDim2.new(1, 0, 0, 20)
-infoLabel.Position = UDim2.new(0, 0, 0.55, 0)
-infoLabel.BackgroundTransparency = 1
-infoLabel.Text = "You cannot be hit at all"
-infoLabel.TextColor3 = Color3.fromRGB(150, 150, 180)
-infoLabel.TextScaled = true
-infoLabel.Font = Enum.Font.Gotham
-infoLabel.Parent = mainFrame
+-- BIG TOGGLE BUTTON
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0.7, 0, 0, 35)
+toggleBtn.Position = UDim2.new(0.15, 0, 0.7, 0)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 75)
+toggleBtn.BorderSizePixel = 0
+toggleBtn.Text = "ACTIVATE"
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.TextScaled = true
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.Parent = frame
 
--- Function to apply TRUE i-frame state
-local function applyTrueIFrames()
-    if not character then return end
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 6)
+btnCorner.Parent = toggleBtn
+
+-- Close button (tiny)
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 20, 0, 20)
+closeBtn.Position = UDim2.new(1, -25, 0, 5)
+closeBtn.BackgroundColor3 = Color3.fromRGB(60, 40, 40)
+closeBtn.BorderSizePixel = 0
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.fromRGB(200, 150, 150)
+closeBtn.TextScaled = true
+closeBtn.Font = Enum.Font.Gotham
+closeBtn.Parent = frame
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 4)
+closeCorner.Parent = closeBtn
+
+-- Key hint
+local key = Instance.new("TextLabel")
+key.Size = UDim2.new(0.5, 0, 0, 15)
+key.Position = UDim2.new(0.25, 0, 0.92, 0)
+key.BackgroundTransparency = 1
+key.Text = "F5"
+key.TextColor3 = Color3.fromRGB(80, 80, 100)
+key.TextScaled = true
+key.Font = Enum.Font.Gotham
+key.Parent = frame
+
+-- ===== AGGRESSIVE INVINCIBILITY =====
+
+local function enableGodMode()
+    if not char then return end
     
-    -- Save original values if not saved
-    if not originalHumanoid[character] then
-        originalHumanoid[character] = {
-            MaxHealth = humanoid.MaxHealth,
-            Health = humanoid.Health,
-            WalkSpeed = humanoid.WalkSpeed,
-            JumpPower = humanoid.JumpPower
-        }
-    end
+    -- EVERYTHING gets destroyed or neutralized
     
-    -- Method 1: Disable damage events
-    local damageConnection = game:GetService("RunService").Heartbeat:Connect(function()
-        if character and character:FindFirstChild("Humanoid") then
-            local hum = character.Humanoid
-            -- Block all damage by constantly healing
-            hum.Health = hum.MaxHealth
-            -- Reset any damage attributes
-            hum:SetAttribute("LastDamageTime", 0)
-            hum:SetAttribute("DamageCooldown", 0)
-            -- Clear any break joints
-            if character:FindFirstChild("BreakJoints") then
-                character.BreakJoints:Destroy()
+    -- Connection 1: MAXIMUM HEALTH LOCK
+    local c1 = rs.Heartbeat:Connect(function()
+        if hum then
+            hum.Health = 999999
+            hum.MaxHealth = 999999
+            hum:SetAttribute("LastDamageTime", -999)
+            hum:SetAttribute("DamageCooldown", -999)
+            hum:SetAttribute("HitCooldown", -999)
+            hum:SetAttribute("LastHit", -999)
+            hum.PlatformStand = false
+            hum.Sit = false
+            hum.AutoRotate = true
+        end
+        if char then
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                hrp:SetAttribute("LastDamageTime", -999)
+                hrp:SetAttribute("DamageCooldown", -999)
+                hrp:SetAttribute("HitCooldown", -999)
             end
         end
     end)
-    table.insert(iframeConnections, damageConnection)
+    table.insert(loops, c1)
     
-    -- Method 2: Block hitbox detection (prevents attacks from registering)
-    local hitboxConnection = game:GetService("RunService").Stepped:Connect(function()
-        if character then
-            -- Disable hitbox detection by making character intangible
-            for _, part in ipairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                    part.Transparency = 0.3
-                    part.Material = Enum.Material.Neon
+    -- Connection 2: REMOVE ALL HITBOXES CONSTANTLY
+    local c2 = rs.Stepped:Connect(function()
+        if not char then return end
+        for _, obj in ipairs(char:GetDescendants()) do
+            -- Remove anything hitbox related
+            if obj:IsA("BasePart") then
+                obj.CanCollide = false
+                obj.Transparency = 0.8
+                -- Remove any damage attributes
+                obj:SetAttribute("Damage", nil)
+                obj:SetAttribute("Hitbox", nil)
+                obj:SetAttribute("Owner", nil)
+                obj:SetAttribute("IsHitbox", nil)
+            end
+            -- Kill any damage scripts
+            if obj:IsA("Script") or obj:IsA("LocalScript") then
+                local name = obj.Name:lower()
+                if name:find("hit") or name:find("damage") or name:find("attack") or name:find("combat") then
+                    obj:Destroy()
                 end
             end
-            -- Also disable any hitbox scripts
-            if character:FindFirstChild("Hitbox") then
-                character.Hitbox:Destroy()
-            end
-            if character:FindFirstChild("HitBox") then
-                character.HitBox:Destroy()
+            -- Remove remote events
+            if obj:IsA("RemoteEvent") or obj:IsA("RemoteFunction") then
+                if obj.Name:lower():find("damage") or obj.Name:lower():find("hit") then
+                    obj:Destroy()
+                end
             end
         end
     end)
-    table.insert(iframeConnections, hitboxConnection)
+    table.insert(loops, c2)
     
-    -- Method 3: Block damage events from server
-    local eventConnection = game:GetService("RunService").Heartbeat:Connect(function()
-        if character then
-            -- Intercept and block damage events
-            local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-            if humanoidRootPart then
-                humanoidRootPart:SetAttribute("DamageCooldown", 0)
-                humanoidRootPart:SetAttribute("LastHitTime", 0)
+    -- Connection 3: BLOCK DAMAGE FIRING
+    local c3 = rs.RenderStepped:Connect(function()
+        if hum then
+            hum.Health = hum.MaxHealth
+            hum.BreakJointsOnDeath = false
+        end
+        if char then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
             end
-            -- Reset health every frame to prevent any damage sticking
-            humanoid.Health = humanoid.MaxHealth
         end
     end)
-    table.insert(iframeConnections, eventConnection)
+    table.insert(loops, c3)
     
-    -- Method 4: Prevent any debuffs or stuns
-    local debuffConnection = game:GetService("RunService").Stepped:Connect(function()
-        if humanoid then
-            -- Remove any stuns or debuffs
-            humanoid.PlatformStand = false
-            humanoid.Sit = false
-            -- Keep health full
-            humanoid.Health = humanoid.MaxHealth
+    -- Connection 4: DESTROY NEW HITBOXES AS THEY APPEAR
+    local c4 = char.DescendantAdded:Connect(function(obj)
+        if obj:IsA("BasePart") then
+            obj.CanCollide = false
+            obj:SetAttribute("Damage", nil)
+            obj:SetAttribute("Hitbox", nil)
+        end
+        if obj:IsA("Script") or obj:IsA("LocalScript") then
+            local name = obj.Name:lower()
+            if name:find("hit") or name:find("damage") or name:find("attack") then
+                obj:Destroy()
+            end
         end
     end)
-    table.insert(iframeConnections, debuffConnection)
+    table.insert(loops, c4)
 end
 
--- Function to remove i-frame state
-local function removeTrueIFrames()
-    for _, connection in ipairs(iframeConnections) do
-        connection:Disconnect()
+local function disableGodMode()
+    for _, c in ipairs(loops) do
+        c:Disconnect()
     end
-    iframeConnections = {}
-    
-    if character then
-        -- Restore original values
-        if originalHumanoid[character] then
-            local orig = originalHumanoid[character]
-            humanoid.MaxHealth = orig.MaxHealth or 100
-            humanoid.Health = orig.Health or 100
-            humanoid.WalkSpeed = orig.WalkSpeed or 16
-            humanoid.JumpPower = orig.JumpPower or 50
-        end
-        
-        -- Restore parts
-        for _, part in ipairs(character:GetDescendants()) do
+    loops = {}
+    if hum then
+        hum.MaxHealth = 100
+        hum.Health = 100
+        hum.BreakJointsOnDeath = true
+    end
+    if char then
+        for _, part in ipairs(char:GetDescendants()) do
             if part:IsA("BasePart") then
                 part.CanCollide = true
                 part.Transparency = 0
-                part.Material = Enum.Material.Plastic
             end
         end
     end
 end
 
--- Main toggle function
-local function toggleIFrames()
-    iframesEnabled = not iframesEnabled
-    
-    if iframesEnabled then
-        iframeButton.Text = "I-FRAMES: ON"
-        iframeButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-        statusLabel.Text = "Status: TRUE I-FRAMES ACTIVE"
-        statusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
-        infoLabel.Text = "You are completely unhittable"
-        infoLabel.TextColor3 = Color3.fromRGB(0, 255, 200)
-        
-        applyTrueIFrames()
+-- ===== TOGGLES =====
+
+local function toggleGod()
+    active = not active
+    if active then
+        toggleBtn.Text = "ACTIVE ✓"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 80)
+        dot.BackgroundColor3 = Color3.fromRGB(50, 255, 100)
+        status.Text = "ON"
+        status.TextColor3 = Color3.fromRGB(100, 255, 150)
+        enableGodMode()
     else
-        iframeButton.Text = "I-FRAMES: OFF"
-        iframeButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-        statusLabel.Text = "Status: Disabled"
-        statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-        infoLabel.Text = "You can be hit normally"
-        infoLabel.TextColor3 = Color3.fromRGB(150, 150, 180)
-        
-        removeTrueIFrames()
+        toggleBtn.Text = "ACTIVATE"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 75)
+        dot.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+        status.Text = "OFF"
+        status.TextColor3 = Color3.fromRGB(255, 100, 100)
+        disableGodMode()
     end
 end
 
--- UI toggle
 local function toggleUI()
-    uiVisible = not uiVisible
-    mainFrame.Visible = uiVisible
-    toggleUIButton.Text = uiVisible and "HIDE UI" or "SHOW UI"
-    toggleUIButton.BackgroundColor3 = uiVisible and Color3.fromRGB(80, 50, 50) or Color3.fromRGB(50, 80, 50)
+    uiOpen = not uiOpen
+    frame.Visible = uiOpen
+    closeBtn.Text = uiOpen and "✕" or "+"
+    closeBtn.BackgroundColor3 = uiOpen and Color3.fromRGB(60, 40, 40) or Color3.fromRGB(40, 60, 40)
 end
 
--- Connect buttons
-iframeButton.MouseButton1Click:Connect(toggleIFrames)
-toggleUIButton.MouseButton1Click:Connect(toggleUI)
-
--- Handle character respawn
-player.CharacterAdded:Connect(function(newChar)
-    character = newChar
-    humanoid = character:WaitForChild("Humanoid")
-    
-    -- Clear old connections
-    for _, connection in ipairs(iframeConnections) do
-        connection:Disconnect()
-    end
-    iframeConnections = {}
-    
-    -- Reapply if enabled
-    if iframesEnabled then
-        applyTrueIFrames()
+-- ===== INPUT =====
+uis.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.F5 then
+        toggleUI()
     end
 end)
 
-print("JJS TRUE Infinite I-Frames Script Loaded!")
-print("You cannot be hit when I-FRAMES is ON")
+-- ===== BUTTONS =====
+toggleBtn.MouseButton1Click:Connect(toggleGod)
+closeBtn.MouseButton1Click:Connect(toggleUI)
+
+-- ===== RESPAWN =====
+player.CharacterAdded:Connect(function(newChar)
+    char = newChar
+    hum = char:WaitForChild("Humanoid")
+    for _, c in ipairs(loops) do c:Disconnect() end
+    loops = {}
+    if active then
+        enableGodMode()
+    end
+end)
+
+print("✦ GOD MODE LOADED ✦")
+print("F5 = toggle UI")
+print("Click button = invincibility")
